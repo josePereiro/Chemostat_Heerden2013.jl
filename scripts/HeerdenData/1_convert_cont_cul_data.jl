@@ -17,7 +17,8 @@
 using CSV
 using DataFrames
 
-# TODO include installation info
+# Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
+# package, then you must activate the package enviroment (see README)
 import Chemostat_Heerden2013
 Hd = Chemostat_Heerden2013.HeerdenData;
 
@@ -28,7 +29,7 @@ Chemostat_Heerden2013.check_env()
 # ---
 # ## Load data
 # ---
-# Data taken from # Heerden2013 https://doi.org/10.1186/1475-2859-12-80.
+# Data taken from Heerden2013 https://doi.org/10.1186/1475-2859-12-80.
 
 # Table 2 Steady state results from continuous fermentations
 orig_data = DataFrame(CSV.read(Hd.HEERDEN_CONT_CUL_DATA_ORIG_FILE, 

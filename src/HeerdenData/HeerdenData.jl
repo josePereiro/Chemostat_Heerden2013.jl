@@ -2,6 +2,9 @@
 
 module HeerdenData
     import ..Chemostat_Heerden2013: PROJ_ROOT, RAW_DATA_DIR, PROCESSED_DATA_DIR
+    import CSV
+    import DataFrames: DataFrame
 
     include("dirs_and_files_names.jl")
+    include("data_interface.jl")
 end
