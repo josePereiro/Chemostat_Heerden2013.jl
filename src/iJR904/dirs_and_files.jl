@@ -1,0 +1,6 @@
+# DIRS
+const MODEL_RAW_DIR = joinpath(RAW_DATA_DIR, "iJR904")
+const MODEL_PROCESSED_DIR = joinpath(PROCESSED_DATA_DIR, basename(MODEL_RAW_DIR))
+mkpath(MODEL_PROCESSED_DIR)
+
+# FILES
