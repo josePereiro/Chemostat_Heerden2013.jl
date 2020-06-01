@@ -1,0 +1,16 @@
+# Table 1 Gene modifications to E. coli C to obtain the succinate-producing E. coli KJ134 [14,24]
+# This data was hand copied from Heerden2013 https://doi.org/10.1186/1475-2859-12-80.
+name	action	EC	reaction
+2-ketobutyrate formate lyase	inactivation	2.3.1.-	2-oxobutanoate + coenzyme A <=> propanoyl-CoA + formate
+Acetate kinase	inactivation	2.7. 2.1	ATP + acetate = ADP + acetyl phosphate
+Alcohol dehydrogenase	inactivation	1.1.1.1	alcohol + NAD+ = an aldehyde + NADH + H+
+Citrate lyase	inactivation	3.1.2.16	acetyl-[citrate (pro-3S)-lyase] + H2O = holo-[citrate (pro-3S)-lyase] + acetate
+Formate transporter	inactivation		bidirectional movement of formate across the cytoplasmic membrane
+Lactate dehydrogenase	inactivation	1.1.1.27	(S)-lactate + NAD+ = pyruvate + NADH + H+
+Methylglyoxal synthase	inactivation	4.2.3.3	glycerone phosphate = 2-oxopropanal + phosphate
+NAD+-linked malic enzyme	inactivation	1.1.1.82	(S)-malate + NAD+ = pyruvate + CO2 + NADH + H+
+PEP carboxikinase	overexpression	4.1.1.32	GTP + oxaloacetate = GDP + phosphoenolpyruvate + CO2
+Phosphotransacetylase	inactivation	2.3.1.8	acetyl-CoA + phosphate = CoA + acetyl phosphate
+Pyruvate formate lyase	inactivation	2.3.1.54	acetyl-CoA + formate = CoA + pyruvate
+Pyruvate oxidase	inactivation	1.2.3.3	pyruvate + phosphate + O2 = acetyl phosphate + CO2 + H2O2
+Threonine decarboxylase	inactivation	4.1.1.81	L-threonine O-3-phosphate = (R)-1-aminopropan-2-yl phosphate + CO2
