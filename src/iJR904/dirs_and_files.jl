@@ -4,3 +4,5 @@ const MODEL_PROCESSED_DIR = joinpath(PROCESSED_DATA_DIR, basename(MODEL_RAW_DIR)
 mkpath(MODEL_PROCESSED_DIR)
 
 # FILES
+const MODEL_RAW_MAT_FILE = joinpath(MODEL_PROCESSED_DIR, "iJR904.mat")
+Base.include_dependency(MODEL_RAW_MAT_FILE)
