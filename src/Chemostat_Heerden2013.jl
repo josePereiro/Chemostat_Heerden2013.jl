@@ -3,6 +3,7 @@
 module Chemostat_Heerden2013
 
 include("Utils/Utils.jl")
+include("BegData/BegData.jl")
 include("HeerdenData/HeerdenData.jl")
 include("iJR904/iJR904.jl")
 
