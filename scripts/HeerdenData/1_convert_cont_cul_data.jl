@@ -60,6 +60,6 @@ first(conv_data, 6)
 # ---
 
 CSV.write(Hd.HEERDEN_CONT_CUL_DATA_CONV_FILE, conv_data, delim = "\t");
-println(relpath(Hd.HEERDEN_CONT_CUL_DATA_CONV_FILE), " creadted!!!")
+println(relpath(Hd.HEERDEN_CONT_CUL_DATA_CONV_FILE), " created!!!")
 
 
