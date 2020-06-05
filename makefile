@@ -23,11 +23,16 @@ data/processed/heerden2013___data/heerden2013___cont_cult_data.tsv: scripts/Heer
 heerden_cont_cul_data: \
 	data/processed/heerden2013___data/heerden2013___cont_cult_data.tsv
 
+
+
 heerden_data: \
 	heerden_cont_cul_data
 
 heerden_data_clear:
 	rm -fr data/processed/heerden2013___data
+
+
+
 
 ###############################################
 # iJR904
@@ -38,8 +43,18 @@ data/processed/iJR904/iJR904.mat: scripts/iJR904/0_make_mat_file.py
 
 iJR904_mat_file: data/processed/iJR904/iJR904.mat
 
+
+
+data/processed/iJR904/iJR904___base_model.jls: scripts/iJR904/1_prepare_base_model.jl
+	$(JULIA) $^
+
+iJR904_base_model: data/processed/iJR904/iJR904___base_model.jls
+
+
+
 iJR904: \
-	iJR904_mat_file
+	iJR904_mat_file \
+	iJR904_base_model
 
 iJR904_clear: 
 	rm -fr data/processed/iJR904
