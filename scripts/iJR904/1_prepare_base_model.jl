@@ -144,116 +144,7 @@ Ch.SteadyState.apply_bound!(model, ξ, iJR.base_intake_info);
 Ch.Utils.lb!(model, "tot_cost", 0.0);
 Ch.Utils.ub!(model, "tot_cost", 1.0);
 
-# ### TODO: Delete, this is just for checking
-
-# Checking with old gem
-old_rxns_path = "/Users/Pereiro/University/Physic/Research/Jose/Metabolism/MaxEntEP/projects/EColi_Heerden2013/data/processed/gems/iJR904___rxns.tsv"
-old_rxns = DataFrame(CSV.read(old_rxns_path, delim = "\t"));
-old_mets_path = "/Users/Pereiro/University/Physic/Research/Jose/Metabolism/MaxEntEP/projects/EColi_Heerden2013/data/processed/gems/iJR904___mets.tsv"
-old_mets = DataFrame(CSV.read(old_mets_path, delim = "\t"));
-
-
-# +
-# Cheking internal reactions
-cost_met = "cost"
-for old_rxn in eachrow(old_rxns)
-    
-    # We must consider the split rev rename
-    new_idxs = [findfirst(isequal(old_rxn.id), model.rxns), 
-                findfirst(isequal(old_rxn.id * "_fwd"), model.rxns),
-                findfirst(isequal(old_rxn.id * "_bkwd"), model.rxns)]
-    
-    all(isnothing.(new_idxs)) && (println("$(old_rxn.id) missing"); continue)
-
-    for (i, new_idx) in enumerate(new_idxs)
-        
-        isnothing(new_idx) && continue
-        
-        new_id = model.rxns[new_idx]
-        # Bounds
-        new_lb, new_ub = Ch.Utils.bounds(model, new_idx)
-        if i == 1 # Non rev
-            old_lb, old_ub = old_rxn.nub, old_rxn.pub
-        elseif i == 2 # fwd
-            old_lb, old_ub = 0.0, old_rxn.pub
-            else # bkwd
-            old_lb, old_ub = 0.0, -old_rxn.nub
-        end
-
-        !(new_lb ≈ old_lb) && println("$new_id: not approx lb new: ", 
-            new_lb, " old: ", old_lb)
-        !(new_ub ≈ old_ub) && println("$new_id: not approx ub new: ", 
-            new_ub, " old: ", old_ub)
-        !(new_ub ≈ old_ub) && println()
-
-        # Cost
-        cost_idx = findfirst(isequal(cost_met), model.mets)
-        isnothing(new_idx) && continue
-
-        old_rxn.ap != old_rxn.an &&
-            println(old_rxn.ap, " different ap, an", old_rxn.ap ,old_rxn.an)
-
-        if cost_idx in Ch.Utils.rxn_reacts(model, new_idx)
-            new_a = Ch.Utils.S(model, cost_idx, new_idx)
-            old_a = old_rxn.ap
-            if !(abs(new_a) ≈ abs(old_a))
-                println("$new_id: not approx a new: ", 
-            new_a, " old: ", old_a)
-            end
-        else
-            println("new $new_id have not defined cost, old ap: ", old_rxn.ap, " old an: ", old_rxn.an)
-        end
-    end
-    
-end
-# -
-
-### Biomass
-obj_ider = "BiomassEcoli"
-for new_idx in Ch.Utils.rxn_mets(model, obj_ider)
-    new_met = model.mets[new_idx]
-    old_idx = findfirst(isequal(new_met), old_mets.id)
-    new_s = Ch.Utils.S(model, new_idx, obj_ider)
-    old_s = old_mets[old_idx, :y]
-    !(old_s ≈ -new_s) && println("$new_met: not approx y new: ", 
-        new_s, " old: ", old_s)
-end
-
-### ATPM
-ider = "ATPM"
-for new_idx in Ch.Utils.rxn_mets(model, ider)
-    new_met = model.mets[new_idx]
-    old_idx = findfirst(isequal(new_met), old_mets.id)
-    new_s = Ch.Utils.S(model, new_idx, obj_ider)
-    old_s = old_mets[old_idx, :y]
-    !(old_s ≈ -new_s) && println("$new_met: not approx y new: ", 
-        new_s, " old: ", old_s)
-end
-
-# Cheking external reactions
-for old_met in eachrow(old_mets)
-    # Medium
-    if old_met.L != 0.0 || old_met.V != 0.0 
-        new_exch = get(iJR.exch_met_map, old_met.id, nothing)
-        isnothing(new_exch) && (println("$(old_met.id) not found"); continue)
-        lb, ub = Ch.Utils.bounds(model, new_exch)
-        L, V = old_met.L, old_met.V
-        if !(abs(lb) ≈ abs(V))
-            println("new $new_exch, lb: $lb")
-            println("old $(old_met.id), V: $V")
-            println()
-        end
-        if !(abs(ub) ≈ abs(L))
-            println("new $new_exch, ub: $ub")
-            println("old $(old_met.id), L: $L")
-            println()
-        end
-    end
-end
-
-# ---
-# ## Exch_met_map
-# ---
+# ### Exch_met_map
 
 # +
 # A quick way to que exchages from mets and te other way around
@@ -285,3 +176,6 @@ Ch.Utils.summary(model)
 ## Saving model
 serialize(iJR.BASE_MODEL_FILE, model)
 println(relpath(iJR.BASE_MODEL_FILE), " created!!!")
+# -
+
+
