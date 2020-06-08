@@ -176,7 +176,7 @@ for (exp, boundle) in boundles
     
     ξ = Hd.val("xi", exp)
 
-    metnet = Ch.Utils.get_data(boundle, ξ, :net)
+    metnet = boundle[ξ, :net]
     
     M,B = length(metnet.mets), length(boundle.βs)
     max_abs_errs_ = []
@@ -226,7 +226,7 @@ function make_stoi_err_gif()
 
         β = closest_βs[exp]
 
-        metnet = Ch.Utils.get_data(boundle, ξ, :net)
+        metnet = boundle[ξ, :net)
 
         errs_ = abs.(Ch.Utils.stoi_err(boundle, ξ, β, :ep))
         Plots.scatter!(p, fill(β, length(errs_)), [errs_], color = colors[exp], label = "")
@@ -261,7 +261,9 @@ function make_stoi_err_gif()
     return gif
 end
 
-gif = make_stoi_err_gif()
+# +
+# gif = make_stoi_err_gif()
+# -
 
 # ### Total Correlations
 

@@ -167,15 +167,15 @@ end
     flush(stdout);
 end
 
-@everywhere function print_good_bye(wid, exp, tcache_file)
-    Core.println("Worker $wid finished exp $exp at $(Time(now())) ----------------------------")
+@everywhere function print_good_bye(wid, stst, tcache_file)
+    Core.println("Worker $wid finished stst $stst at $(Time(now())) ----------------------------")
     Core.println("\tTemp cache file ", relpath(tcache_file))
     Core.println()
     flush(stdout);
 end
 
-@everywhere function print_return_cached(wid, exp, tcache_file)
-    Core.println("Worker $wid returns cached exp $exp at $(Time(now())) ----------------------------")
+@everywhere function print_return_cached(wid, stst, tcache_file)
+    Core.println("Worker $wid returns cached stst $stst at $(Time(now())) ----------------------------")
     Core.println("\tTemp cache file ", relpath(tcache_file))
     Core.println()
     flush(stdout);
@@ -237,8 +237,8 @@ end
         fbaout = Ch.FBA.fba(model, obj_ider, cost_ider)
         
         # boundling
-        Ch.Utils.add_data!(boundle, ξ, :fba, fbaout)
-        Ch.Utils.add_data!(boundle, ξ, :net, model)
+        boundle[ξ, :fba] =  fbaout
+        boundle[ξ, :net] = model
         
         # Info
         exp_av = Hd.val("D", exp)
@@ -264,7 +264,7 @@ end
                 
 
                 # Boundling
-                Ch.Utils.add_data!(boundle, ξ, β, :ep, epout)
+                boundle[ξ, β, :ep] = epout
                 
                 # Info
                 # Print progress in worker 1
