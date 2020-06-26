@@ -234,7 +234,7 @@ end
         obj_idx = Ch.Utils.rxnindex(model, obj_ider)
         
         # fba
-        fbaout = Ch.FBA.fba(model, obj_ider, cost_ider)
+        fbaout = Ch.LP.fba(model, obj_ider, cost_ider)
         
         # boundling
         boundle[ξ, :fba] =  fbaout

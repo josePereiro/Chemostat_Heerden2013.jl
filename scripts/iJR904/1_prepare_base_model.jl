@@ -51,7 +51,7 @@ obj_ider = "BiomassEcoli"
 # the maximal experimental growth rate in Heerden2013 is ~0.2 1/h
 # The raw model present a growth rate bigger than that, so it is ok
 # to use it directly as base model
-fbaout = Ch.FBA.fba(model, obj_ider);
+fbaout = Ch.LP.fba(model, obj_ider);
 Ch.Utils.summary(model, fbaout)
 # -
 
@@ -165,11 +165,11 @@ println(relpath(iJR.EXCH_MET_MAP_FILE), " created!!!")
 # ### Saving model
 
 # +
-model = Ch.Utils.fva_preprocess(model, 
+model = Ch.LP.fva_preprocess(model, 
 #     eps = 1-9, # This avoid blocking totally any reaction
     verbose = true);
 
-fbaout = Ch.FBA.fba(model, obj_ider);
+fbaout = Ch.LP.fba(model, obj_ider);
 Ch.Utils.summary(model, fbaout)
 Ch.Utils.summary(model)
 
