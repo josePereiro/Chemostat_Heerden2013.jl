@@ -155,15 +155,11 @@ beg_rxns_map = Dict("carbonyl reductase (NADPH)"=>["P5CR"],
 "DNA ligase (NAD+)"=>[""])
 
 # base model exch met map
-# A quick way to que exchages from mets and te other way around
+# A quick way to get exchages from mets and te other way around
 exch_met_map = nothing
 function load_exch_met_map()
     !isfile(EXCH_MET_MAP_FILE) && return nothing
-    global exch_met_map = Dict()
-    df = DataFrame(CSV.read(EXCH_MET_MAP_FILE))
-    for (m1, m2) in zip(df[!,1], df[!,2])
-        exch_met_map[m1] = m2
-    end
+    global exch_met_map = load_data(EXCH_MET_MAP_FILE; verbose = false)
     return exch_met_map
 end
 load_exch_met_map()

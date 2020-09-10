@@ -2,6 +2,8 @@
 
 module Chemostat_Heerden2013
 
+using DrWatson
+
 include("Utils/Utils.jl")
 include("BegData/BegData.jl")
 include("HeerdenData/HeerdenData.jl")
