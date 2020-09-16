@@ -4,7 +4,7 @@
 # ---
 # ## Load data
 # ---
-cont_cul_data = DataFrame(CSV.read(HEERDEN_CONT_CUL_DATA_CONV_FILE, delim = '\t', comment = "#"))
+cont_cul_data = CSV.read(HEERDEN_CONT_CUL_DATA_CONV_FILE, DataFrame; delim = '\t', comment = "#")
 
 # ---
 # ## Interface

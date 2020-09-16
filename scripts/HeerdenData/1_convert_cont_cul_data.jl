@@ -32,8 +32,8 @@ Chemostat_Heerden2013.check_env()
 # Data taken from Heerden2013 https://doi.org/10.1186/1475-2859-12-80.
 
 # Table 2 Steady state results from continuous fermentations
-orig_data = DataFrame(CSV.read(Hd.HEERDEN_CONT_CUL_DATA_ORIG_FILE, 
-    delim = "\t", comment = "#"));
+orig_data = CSV.read(Hd.HEERDEN_CONT_CUL_DATA_ORIG_FILE,  DataFrame;
+    delim = "\t", comment = "#");
 for n in names(orig_data)
     orig_data[!, n] = Vector{Union{String, Float64}}(orig_data[!, n])
     orig_data[3:end, n] .= parse.(Float64, orig_data[3:end, n])

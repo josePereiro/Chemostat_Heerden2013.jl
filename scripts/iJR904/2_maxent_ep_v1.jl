@@ -1,328 +1,218 @@
-# -*- coding: utf-8 -*-
-# ---
-# jupyter:
-#   jupytext:
-#     cell_metadata_filter: -all
-#     formats: jl,ipynb
-#     text_representation:
-#       extension: .jl
-#       format_name: light
-#       format_version: '1.5'
-#       jupytext_version: 1.3.2
-#   kernelspec:
-#     display_name: Julia 1.1.0
-#     language: julia
-#     name: julia-1.1
-# ---
 
-# ### Precompaling in master worker first
-
-# run add "https://github.com/josePereiro/Chemostat" in the 
-# julia Pkg REPL for installing the package
-import Chemostat
-Ch = Chemostat
-
-# +
-# Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
-# package, then you must activate the package enviroment (see README)
-import Chemostat_Heerden2013
-Hd = Chemostat_Heerden2013.HeerdenData;
-Bd = Chemostat_Heerden2013.BegData
-iJR = Chemostat_Heerden2013.iJR904
-
-# This just check that the script is run in the
-# package enviroment
-Chemostat_Heerden2013.check_env()
-# -
-
-# ### Loading in everywhere
-
-# +
 using Distributed
 
-NO_CORES = length(Sys.cpu_info())
-length(workers()) < NO_CORES && addprocs(NO_CORES - 1)
+NO_CORES = length(Sys.cpu_info()) - 1
+length(workers()) < NO_CORES && addprocs(NO_CORES - 1; exeflags = "--project")
 println("Working in: ", workers())
 
-# +
 @everywhere begin
-
-using Distributed
-using Serialization
-using Dates
-
-using Chemostat
-Ch = Chemostat
     
-# Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
-# package, then you must activate the package enviroment (see README)
-import Chemostat_Heerden2013
-Hd = Chemostat_Heerden2013.HeerdenData;
-Bd = Chemostat_Heerden2013.BegData
-iJR = Chemostat_Heerden2013.iJR904
+    using DrWatson 
+    quickactivate(@__DIR__, "Chemostat_Heerden2013")
 
-# This just check that the script is run in the
-# package enviroment
-Chemostat_Heerden2013.check_env()
+    using SparseArrays
     
+    ## -------------------------------------------------------------------
+    import Chemostat
+    import Chemostat.Utils: MetNet, EPModel, ChstatBoundle,
+                            rxnindex, metindex, compress_dict, 
+                            uncompress_dict, clampfileds!, well_scaled_model,
+                            ChstatBoundle, norm_abs_stoi_err, av, va, nzabs_range,
+                            struct_to_dict
+    import Chemostat.SimulationUtils: epoch_converge_ep!, cached_simulation, set_cache_dir, 
+                            tagprintln_inmw, println_inmw, tagprintln_ifmw, println_ifmw,
+                            save_cache, load_cache, delete_temp_caches
+    import Chemostat.SteadyState: apply_bound!
+
+    ## -------------------------------------------------------------------
+    import Chemostat_Heerden2013: HeerdenData, BegData, iJR904, save_data, load_data
+    import Chemostat_Heerden2013.iJR904: OBJ_IDER, ATPM_IDER, COST_IDER
+    const Hd  = HeerdenData;
+    const iJR = iJR904
+    set_cache_dir(iJR.MODEL_PROCESSED_DATA_DIR)
+
 end
-# -
 
-#
-# ### Meta
 
-@everywhere notebook_name = "maxent_ep_v1";
-
-# ### Params
-
-# +
 @everywhere begin
 
-params = Dict()
+    ## ------------------------------------------------------------------
+    # SIMULATION GLOBAL ID
+    # This must uniquely identify this simulation version
+    # It is used to avoid cache collisions
+    sim_global_id = "iJR904_maxent_fba_ep_v1"
+    
+    ## -------------------------------------------------------------------
+    # PARAMS
+    cGLCs = Hd.val("cGLC")
+    PARAMS = Dict(exp => Dict() for exp in eachindex(cGLCs))
 
-# Intake info
-params["obj_ider"] = "BiomassEcoli";
-params["cost_ider"] = "tot_cost";
-
-# Intake info
-# TODO redesign this to be included in the model
-params["intake_infos"] = Dict()
-for (exp, cGLC) in enumerate(Hd.val("cGLC"))
-    intake_info = deepcopy(iJR.base_intake_info)
-
-    # The only difference between experiments is the feed medium 
-    # concentration.
-    intake_info["EX_glc_LPAREN_e_RPAREN_"]["c"] = cGLC
+    # This limit the beta values for each experiment,
+    # for approximating the beta that enforce the experimental objective.
+    # this was computed in a previous run
+    for (exp, (βlb , βub)) in Dict(
+                        #    βlb   ,   βub
+                        1=>(56225.2, 72225.2),
+                        2=>(56229.0, 72229.0),
+                        3=>(49389.2, 65389.2),
+                        4=>(49245.0, 65245.0),
+                        5=>(61715.6, 77715.6),
+                        6=>(44662.8, 60662.8),
+                        7=>(44656.2, 60656.2),
+                        8=>(49014.4, 65014.4),
+                        9=>(49018.2, 65018.2),
+                        10=>(40639.5, 56639.5),
+                        11=>(40641.7, 56641.7),
+                        12=>(33057.8, 49057.8),
+                        13=>(33224.9, 49224.9)
+                    )
         
-    params["intake_infos"][exp] = intake_info
-end;
-
-# ep params
-# The params of EP are chosen after several tries to ensure the lower 
-# stoichiometric errors and the tuning of the objective reaction (See Cossio's paper)
-params["ep_alpha"] = Dict()
-params["ep_epsconv"] = Dict()
-for exp in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-    params["ep_alpha"][exp] = 1e9
-    params["ep_epsconv"][exp] = 1e-6
-end
-for exp in [12,13]
-    params["ep_alpha"][exp] = 1e10
-    params["ep_epsconv"][exp] = 1e-6
-end
-
-# This limit the beta values for each experiment,
-# for approximating the beta that enforce the experimental objective.
-# this was computed in a previous run
-# TODO automatize this
-params["ep_beta_intervals"] = Dict(
-    #    βlb   ,   βub
-    1=>(56225.2, 72225.2),
-    2=>(56229.0, 72229.0),
-    3=>(49389.2, 65389.2),
-    4=>(49245.0, 65245.0),
-    5=>(61715.6, 77715.6),
-    6=>(44662.8, 60662.8),
-    7=>(44656.2, 60656.2),
-    8=>(49014.4, 65014.4),
-    9=>(49018.2, 65018.2),
-    10=>(40639.5, 56639.5),
-    11=>(40641.7, 56641.7),
-    12=>(33057.8, 49057.8),
-    13=>(33224.9, 49224.9)
-)
- 
-end
-# -
-
-# ### Print functions
-
-@everywhere function print_hello(wid, exp, ξs, βs)
-    Core.println("Worker $wid starting exp $exp at $(Time(now())) ----------------------------")
-    Core.println("\txis:   $ξs")
-    Core.println("\tbetas: $βs")
-    Core.println()
-    flush(stdout);
-end
-
-@everywhere function print_progress(wid, exp, ξi, ξs, ξ,  βi, βs, β, 
-            exp_av, fba_av, ep_av, ep_alpha, ep_epsconv,
-            elapsed)
-    Core.println("Worker: $wid exp: $exp progress at $(Time(now())) ----------------------------")
-    Core.println("\txi: [$ξi/ $(length(ξs))] beta: [$βi/ $(length(βs))]")
-    Core.println("\t  ----------------- --------------")
-    Core.println("\tmodel xi:           $ξ")
-    Core.println("\tmodel beta:         $β")
-    Core.println("\tmodel ep_alpha:     $ep_alpha")
-    Core.println("\tmodel ep_epsconv:   $ep_epsconv")
-    Core.println("\tmodel fba obj:      $fba_av")
-    Core.println("\tmodel ep obj:       $ep_av")
-    Core.println("\t  ----------------- --------------")
-    Core.println("\texp   xi:           $(Hd.val(:xi, exp))")
-    Core.println("\texp   cGLC:         $(Hd.val(:cGLC, exp))")
-    Core.println("\texp   obj:          $exp_av")
-    Core.println("\t  ----------------- --------------")
-    Core.println("\txi elapsed time(s): $elapsed")
-    Core.println()
-    flush(stdout);
-end
-
-@everywhere function print_good_bye(wid, stst, tcache_file)
-    Core.println("Worker $wid finished stst $stst at $(Time(now())) ----------------------------")
-    Core.println("\tTemp cache file ", relpath(tcache_file))
-    Core.println()
-    flush(stdout);
-end
-
-@everywhere function print_return_cached(wid, stst, tcache_file)
-    Core.println("Worker $wid returns cached stst $stst at $(Time(now())) ----------------------------")
-    Core.println("\tTemp cache file ", relpath(tcache_file))
-    Core.println()
-    flush(stdout);
-end
-
-# ### temp cache file
-
-@everywhere temp_cache_file(exp) = 
-    joinpath(iJR.MODEL_PROCESSED_DATA_DIR, "$(notebook_name)_temp_cache_exp$exp.jls")
-
-# ### work_function
-
-@everywhere function process_exp(exp; upfrec = 10)
-
-    # I will cache temporally the results of this function 
-    # I do not check any cache consistency, so delete the temporal caches if you
-    # dont trust them
-    tcache_file = temp_cache_file(exp)
-
-    # If cached return 
-    if isfile(tcache_file)
-        # Info
-        # Print in worker 1
-        remotecall_wait(print_return_cached, 1, myid(), exp, tcache_file)
-
-        return deserialize(tcache_file)
+        # Change here how many betas to model
+        PARAMS[exp][:βs] = collect(range(βlb, βub, length = 30)) 
     end
 
-    # prepare params
-    # Change here how many xi to model, you should always include the experimental xi
-    ξs = [Hd.val("xi", exp); range(1, 100, length = 10)] |> sort 
+    # ep params
+    # The params of EP are chosen after several tries to ensure the lower 
+    # stoichiometric errors and the tuning of the objective reaction (See Cossio's paper)
+    for exp in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        PARAMS[exp][:alpha] = 1e9
+        PARAMS[exp][:epsconv] = 1e-6
+    end
 
-    βlb, βub = params["ep_beta_intervals"][exp]
-    # Change here how many betas to model
-    βs = collect(range(βlb, βub, length = 30)) 
+    for exp in [12,13]
+        PARAMS[exp][:alpha] = 1e10
+        PARAMS[exp][:epsconv] = 1e-6
+    end
 
-    ep_alpha = params["ep_alpha"][exp]
-    ep_epsconv = params["ep_epsconv"][exp]
+    # ξs
+    for (exp, cGLC) in cGLCs |> enumerate
+        # Change here how many xi to model, you should always include the experimental xi
+        PARAMS[exp][:ξs] = [Hd.val("xi", exp); range(1, 100, length = 10)] |> sort
+    end
 
-    obj_ider = params["obj_ider"]
-    cost_ider = params["cost_ider"]
-    intake_info = params["intake_infos"][exp]
+    # Intake info 
+    for (exp, cGLC) in cGLCs |> enumerate
+        intake_info = deepcopy(iJR.base_intake_info)
+
+        # The only difference between experiments is the feed medium 
+        # concentration.
+        intake_info["EX_glc_LPAREN_e_RPAREN_"]["c"] = cGLC
+            
+        PARAMS[exp][:intake_info] = intake_info
+    end;
+
     
-    # Info
-    # Print hello in worker 1
-    remotecall_wait(print_hello, 1, myid(), exp, ξs, βs)
-    
-    boundle = Ch.Utils.ChstatBoundle()
-    
-    for (ξi, ξ) in ξs |> sort |> reverse |> enumerate 
-        # Prepare model
-        model = deserialize(iJR.BASE_MODEL_FILE);
-
-        # chsts bound
-        Ch.SteadyState.apply_bound!(model, ξ, intake_info)
-        obj_idx = Ch.Utils.rxnindex(model, obj_ider)
+    ## -------------------------------------------------------------------
+    # PREPARE MODEL FUNCTION
+    function prepare_model(ξ, intake_info)
         
-        # fba
-        fbaout = Ch.LP.fba(model, obj_ider, cost_ider)
+        dat = load_data(iJR.BASE_MODEL_FILE; verbose = false)
+        model = MetNet(;dat...)
         
+        apply_bound!(model, ξ, intake_info; 
+        emptyfirst = true, ignore_miss = true)
+        
+        return model
+    end
+
+end # @everywhere
+
+## -------------------------------------------------------------------
+# RUN SIMULATION
+
+windexes = pmap(enumerate(cGLCs)) do (exp, cGLC) # This is parallizable
+
+    EPOCHLEN = 40
+    index_id = (:INDEX, myid())
+
+    exp_params = PARAMS[exp]
+    ξs = exp_params[:ξs]
+    βs = exp_params[:βs]
+    intake_info = exp_params[:intake_info]
+
+    epmodel_kwargs = Dict(k => exp_params[k] for k in [:alpha])
+    epconv_kwargs = Dict(k => exp_params[k] for k in [:epsconv])
+
+    tagprintln_inmw("PROCESSING EXPERIMENT", 
+        "\nexp:        ", exp,
+        "\ncGLC:       ", cGLC,
+        "\nxi count:   ", length(ξs),
+        "\nbeta count: ", length(βs),
+        "\nalpha:      ", exp_params[:alpha],
+        "\nepsconv:    ", exp_params[:epsconv],
+        "\nEPOCHLEN:   ", EPOCHLEN,
+        "\n"
+    )
+
+    exp_id = (exp, cGLC, sim_global_id, hash(PARAMS))
+
+    for (ξi, ξ) in ξs |> enumerate
+
+        sim_id = (ξi, ξ, exp_id)
+
+        tagprintln_inmw("PROCESSING XI", 
+            "\nxi: ", ξ, " [", ξi, ",", length(ξs), "]",
+            "\n"
+        )
+
+        dat = cached_simulation(;
+                    epochlen = EPOCHLEN, # TODO: handle better
+                    verbose = true,
+                    sim_id = sim_id,
+                    get_model = function()
+                        return prepare_model(ξ, intake_info);
+                    end,
+                    objider = OBJ_IDER,
+                    costider = COST_IDER,
+                    beta_info = [(OBJ_IDER, βs)], # TODO: handle betas better 
+                    clear_cache = false,
+                    use_seed = true,
+                    epmodel_kwargs = epmodel_kwargs,
+                    epconv_kwargs = epconv_kwargs
+        )
+
+        ## CACHING RESULTS
+        model = prepare_model(ξ, intake_info)
+        save_cache(sim_id, (exp, ξ, βs, model, dat); headline = "CATCHING RESULTS\n")
+
+        ## SAVING TO INDEX
+        index = load_cache(index_id; verbose = false)
+        index = isnothing(index) ? [] : index
+        push!(index, sim_id)
+        save_cache(index_id, index; verbose = false)
+
+    end # ξs
+
+    return index_id
+end # cGLCs map
+
+
+## BOUNDLING
+boundles = Dict()
+for index_id in windexes
+
+    index = load_cache(index_id; verbose = false)
+    isnothing(index) && continue
+    
+    for id in index
+        exp, ξ, βs, model, dat = load_cache(id; verbose = false)
+       
         # boundling
-        boundle[ξ, :fba] =  fbaout
+        boundle = get!(boundles, exp, ChstatBoundle())
+
         boundle[ξ, :net] = model
-        
-        # Info
-        exp_av = Hd.val("D", exp)
-        fba_av = Ch.Utils.av(model, fbaout, obj_idx)
-        
-        t0 = time() # to track xi processing duration
-        seed_epout = nothing
-        βv = zeros(size(model, 2))
-        for (βi, β) in βs |> sort |> reverse |> enumerate
-            try
-                # epout
-                βv[obj_idx] = β
-                epout = Ch.MaxEntEP.maxent_ep(model; 
-                                            α = ep_alpha, 
-                                            βv = βv,
-                                            epsconv = ep_epsconv, 
-                                            solution = seed_epout,
-                                            verbose = false)
-                # The previous result is used as starting point in the next computation, 
-                # this reduce the convergence time a lot 
-                seed_epout = epout 
-                
-                
+        boundle[ξ, :fba] = dat[:fba]
 
-                # Boundling
-                boundle[ξ, β, :ep] = epout
-                
-                # Info
-                # Print progress in worker 1
-                ep_av = Ch.Utils.av(model, epout, obj_idx)
-                show_progress = βi == 1 || βi == length(βs) || βi % upfrec == 0
-                show_progress && remotecall_wait(print_progress, 1, myid(), 
-                    exp, ξi, ξs, ξ,  βi, βs, β, 
-                    exp_av, fba_av, ep_av, ep_alpha, ep_epsconv,
-                    time() - t0)
-                
-            catch err
-                println("Worker $(myid()): Error at exp: $exp, xi: $ξ, beta; $β")
-                rethrow(err)
-            end
+        for (βi, β) in βs |> enumerate
+            boundle[ξ, β, :ep] = dat[(:ep, βi)]
         end
-        
+
     end
-    
-    # Info
-    # Print hello in worker 1
-    remotecall_wait(print_good_bye, 1, myid(), exp, tcache_file)
-    
-    # Catching
-    serialize(tcache_file, (exp, boundle))
-
-    return (exp, boundle)
 end
 
-# ---
-# ### Parallel loop
-# ---
-# This will output a lot of text and can take a while (~ 4h, 3 workers, Dual-Core Intel Core i5)!!!
+## SAVING
+save_data(iJR.MODEL_PROCESSED_DATA_DIR, boundles)
 
-remote_results = pmap(process_exp, eachindex(Hd.val("cGLC")));
+## DELETING CACHE
+delete_temp_caches()
 
-
-boundles = Dict();
-for (exp, boundle) in remote_results
-    boundles[exp] = boundle
-end
-
-# ---
-# ### Saving results cache
-# ---
-
-println("Saving results")
-cache_file = joinpath(iJR.MODEL_PROCESSED_DATA_DIR, "$(notebook_name)__cache8.jls")
-serialize(cache_file, (params, boundles))
-println(realpath(cache_file), " created!!!")
-println()
-
-# ---
-# ### Deleting temp caches
-# ---
-
-println("Deleting temporal cache files")
-for exp in eachindex(Hd.val("cGLC"))
-    tcache_file = temp_cache_file(exp)
-    rm(tcache_file, force = true)
-    println(relpath(tcache_file), " deleted!!!")
-end

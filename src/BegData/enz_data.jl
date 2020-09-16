@@ -7,4 +7,4 @@ ave_a = 0.0031 # I will use this to set the unknown costs
 
 
 # enzymatic costs from Beg et al. (2007): https://doi.org/10.1073/pnas.0609845104.
-beg_enz_data = CSV.read(BEG_ENZIMATIC_DATA_FILE)
+beg_enz_data = CSV.read(BEG_ENZIMATIC_DATA_FILE, DataFrame)
