@@ -27,15 +27,15 @@ notebook_name = "2_maxent_ep_v1_plots";
 
 ## -------------------------------------------------------------------
 # LOADING RESULTS
-boundles = load_data(iJR.MAXENT_FBA_EB_BOUNDLES_FILE)
+bundles = load_data(iJR.MAXENT_FBA_EB_BOUNDLES_FILE)
 # cache_file = joinpath(iJR.MODEL_PROCESSED_DATA_DIR, "maxent_ep_v1__cache4.jls")
-# params, boundles = deserialize(cache_file)
-# # boundles = deserialize(cache_file)
+# params, bundles = deserialize(cache_file)
+# # bundles = deserialize(cache_file)
 # println(realpath(cache_file), " loaded!!!")
-exps = boundles |> keys |> collect |> sort
-for (exp, boundle) in boundles
-    sort!(boundle.βs)
-    sort!(boundle.ξs)
+exps = bundles |> keys |> collect |> sort
+for (exp, bundle) in bundles
+    sort!(bundle.βs)
+    sort!(bundle.ξs)
 end
 
 ## -------------------------------------------------------------------
@@ -44,12 +44,12 @@ end
 # to the experimetal data. See Cossio's paper (see README)
 closest_βs = Dict()
 for exp in eachindex(Hd.val("cGLC"))
-    boundle = boundles[exp]
+    bundle = bundles[exp]
     ξ = Hd.val("xi", exp)
-    closest_β = boundle.βs[1]
-    for β in boundle.βs
-        μ = Ch.Utils.av(boundle, ξ, β, :ep, OBJ_IDER)
-        cμ = Ch.Utils.av(boundle, ξ, closest_β, :ep, OBJ_IDER)
+    closest_β = bundle.βs[1]
+    for β in bundle.βs
+        μ = Ch.Utils.av(bundle, ξ, β, :ep, OBJ_IDER)
+        cμ = Ch.Utils.av(bundle, ξ, closest_β, :ep, OBJ_IDER)
         exp_μ = Hd.val("D", exp)
         
         abs(μ - exp_μ) < abs(cμ - exp_μ) && (closest_β = β)
@@ -78,10 +78,10 @@ function conc(Hd_met, exp, ξ::Real, data_idxs...)
     # s = c - u*ξ if u > 0 means intake
     model_met = iJR.Hd_mets_map[Hd_met]
     model_exch = iJR.exch_met_map[model_met]
-    boundle = boundles[exp]
+    bundle = bundles[exp]
     
-    u = Ch.Utils.av(boundle, ξ, data_idxs..., model_exch) # exchange val
-    uerr = Ch.Utils.va(boundle, ξ, data_idxs..., model_exch) |> sqrt # exchange std
+    u = Ch.Utils.av(bundle, ξ, data_idxs..., model_exch) # exchange val
+    uerr = Ch.Utils.va(bundle, ξ, data_idxs..., model_exch) |> sqrt # exchange std
     c = Hd_met == "GLC" ? Hd.val("cGLC", exp) : 0.0
     return (max(c + u * ξ, 0.0), uerr * ξ)
 end
@@ -105,11 +105,11 @@ for exp in eachindex(Hd.val("cGLC"))
     
     # model
     exp_ξ = Hd.val("xi", exp)
-    boundle = boundles[exp]
-    μs = Ch.Utils.av(boundle, exp_ξ, boundle.βs, :ep, OBJ_IDER)
+    bundle = bundles[exp]
+    μs = Ch.Utils.av(bundle, exp_ξ, bundle.βs, :ep, OBJ_IDER)
     c = rand(colors)
     m = rand(markers)
-    Plots.plot!(p, boundle.βs, μs, label = "", color = colors[exp], lw = 3)
+    Plots.plot!(p, bundle.βs, μs, label = "", color = colors[exp], lw = 3)
 
     # exp
     Plots.scatter!(p, [closest_βs[exp]], [Hd.val("D", exp)], label = "", 
@@ -124,16 +124,16 @@ ps = []
 for Hd_ider in Hd.msd_mets
     try
         p = Plots.plot(title = Hd_ider, xlabel = "xi", ylabel = "medium conc (mM)")
-        for (exp, boundle) in boundles
+        for (exp, bundle) in bundles
             
             # FBA
-            concs_, conc_errs_ = conc(Hd_ider, exp, boundle.ξs, :fba)
-            Plots.plot!(p, boundle.ξs, concs_, color = colors[exp], label = "", ls = :dash)
+            concs_, conc_errs_ = conc(Hd_ider, exp, bundle.ξs, :fba)
+            Plots.plot!(p, bundle.ξs, concs_, color = colors[exp], label = "", ls = :dash)
             
             # EP
             β = closest_βs[exp]
-            concs_, conc_errs_ = conc(Hd_ider, exp, boundle.ξs, β, :ep)
-            Plots.plot!(p, boundle.ξs, concs_, 
+            concs_, conc_errs_ = conc(Hd_ider, exp, bundle.ξs, β, :ep)
+            Plots.plot!(p, bundle.ξs, concs_, 
                 yerr = conc_errs_,
                 color = colors[exp], label = "", 
                 m = :star)
@@ -159,36 +159,36 @@ p = Plots.plot(xlabel = "beta",
     ylabel = "abs_stoi_err/ abs_mean_flx", 
     legend = :topleft)
 
-for (exp, boundle) in boundles
+for (exp, bundle) in bundles
     
     ξ = Hd.val("xi", exp)
 
-    metnet = boundle[ξ, :net]
+    metnet = bundle[ξ, :net]
     
-    M,B = length(metnet.mets), length(boundle.βs)
+    M,B = length(metnet.mets), length(bundle.βs)
     max_abs_errs_ = []
     mean_abs_errs_ = []
     std_abs_errs_ = []
     
     
-    for β in boundle.βs 
-        abs_errs_ = abs.(Ch.Utils.stoi_err(boundle, ξ, β, :ep))
+    for β in bundle.βs 
+        abs_errs_ = abs.(Ch.Utils.stoi_err(bundle, ξ, β, :ep))
         
         max_abs_err_ = maximum(abs_errs_)
         mean_abs_err_ = mean(abs_errs_)
         std_abs_err_ = std(abs_errs_)
         
         
-        mean_abs_flxs_ = mean(abs.(Ch.Utils.av(boundle, ξ, β, :ep)))
+        mean_abs_flxs_ = mean(abs.(Ch.Utils.av(bundle, ξ, β, :ep)))
         
         push!(max_abs_errs_, max_abs_err_/ mean_abs_flxs_)
         push!(mean_abs_errs_, mean_abs_err_/ mean_abs_flxs_)
         push!(std_abs_errs_, std_abs_err_/ mean_abs_flxs_)
     end
     
-    Plots.plot!(p, boundle.βs , max_abs_errs_, alpha = 50, color = colors[exp], 
+    Plots.plot!(p, bundle.βs , max_abs_errs_, alpha = 50, color = colors[exp], 
         lw = 1, label = "")
-    Plots.plot!(p, boundle.βs , mean_abs_errs_, yerr = std_abs_errs_, alpha = 50, color = colors[exp], 
+    Plots.plot!(p, bundle.βs , mean_abs_errs_, yerr = std_abs_errs_, alpha = 50, color = colors[exp], 
         lw = 1, label = "", ls = :dash)
     
 end
@@ -208,20 +208,20 @@ p
 
 #     for exp in eachindex(Hd.val("cGLC"))
 
-#         boundle = boundles[exp]
+#         bundle = bundles[exp]
 #         ξ = Hd.val("xi", exp)
 #         ξstr = round(ξ, digits = 2)
 
 #         β = closest_βs[exp]
 
-#         metnet = boundle[ξ, :net)
+#         metnet = bundle[ξ, :net)
 
-#         # errs_ = abs.(Ch.Utils.stoi_err(boundle, ξ, β, :ep))
+#         # errs_ = abs.(Ch.Utils.stoi_err(bundle, ξ, β, :ep))
 #         # Plots.scatter!(p, fill(β, length(errs_)), [errs_], color = colors[exp], label = "")
 
-#         # flxs_ = [abs.(Ch.Utils.av(boundle, ξ, β, :ep)) for β in boundle.βs]
-#         # Plots.plot!(p, boundle.βs, mean.(flxs_), lw = 1, label = "", color = :blue)
-#         # Plots.plot!(p, boundle.βs, minimum.(flxs_), lw = 1, label = "", color = :red)
+#         # flxs_ = [abs.(Ch.Utils.av(bundle, ξ, β, :ep)) for β in bundle.βs]
+#         # Plots.plot!(p, bundle.βs, mean.(flxs_), lw = 1, label = "", color = :blue)
+#         # Plots.plot!(p, bundle.βs, minimum.(flxs_), lw = 1, label = "", color = :red)
 #     end
 
 #     # Legend
@@ -293,20 +293,20 @@ ps = []
 ider = OBJ_IDER
 ep_p = Plots.plot(xlabel = "exp (1/ h)", ylabel = "model (1/ h)", title = "EP ($ider)")
 fba_p = Plots.plot(xlabel = "exp (1/ h)", ylabel = "model (1/ h)", title = "FBA ($ider)")
-for (exp, boundle) in boundles
+for (exp, bundle) in bundles
     β = closest_βs[exp]
     
     exp_av = Hd.val("D", exp)
     
     # EP
-    model_av = Ch.Utils.av(boundle, Hd.val(:xi, exp), closest_βs[exp], :ep, ider)
-    model_va = Ch.Utils.va(boundle, Hd.val(:xi, exp), closest_βs[exp], :ep, ider) .|> sqrt
+    model_av = Ch.Utils.av(bundle, Hd.val(:xi, exp), closest_βs[exp], :ep, ider)
+    model_va = Ch.Utils.va(bundle, Hd.val(:xi, exp), closest_βs[exp], :ep, ider) .|> sqrt
     
     Plots.scatter!(ep_p, [exp_av], [model_av], 
                 label = "", color = colors[exp], yerr = model_va, ms = 5)
     
     # FBA
-    model_av = Ch.Utils.av(boundle,Hd.val(:xi, exp), :fba, ider)
+    model_av = Ch.Utils.av(bundle,Hd.val(:xi, exp), :fba, ider)
     Plots.scatter!(fba_p, [exp_av], [model_av], marker = :star,
                 label = "", color = colors[exp], ls = :dash, ms = 5)
     
@@ -355,16 +355,16 @@ p = Plots.plot(ps..., size = [800,1600],
 # # Biomass
 # ider = params["obj_ider"]
 # p = Plots.plot(xlabel = "xi", ylabel = "flx", title = ider)
-# for (exp, boundle) in boundles
+# for (exp, bundle) in bundles
 #     β = closest_βs[exp]
     
-#     ep_avs = Ch.Utils.av(boundle, boundle.ξs, β, :ep, ider)
-#     ep_stds = Ch.Utils.va(boundle, boundle.ξs, β, :ep, ider) .|> sqrt
+#     ep_avs = Ch.Utils.av(bundle, bundle.ξs, β, :ep, ider)
+#     ep_stds = Ch.Utils.va(bundle, bundle.ξs, β, :ep, ider) .|> sqrt
     
-#     fba_avs = Ch.Utils.av(boundle, boundle.ξs, :fba, ider)
+#     fba_avs = Ch.Utils.av(bundle, bundle.ξs, :fba, ider)
     
-#     Plots.plot!(p, boundle.ξs, ep_avs, color = colors[exp], label = "")
-#     Plots.plot!(p, boundle.ξs, fba_avs, ls = :dash, color = colors[exp], label = "")
+#     Plots.plot!(p, bundle.ξs, ep_avs, color = colors[exp], label = "")
+#     Plots.plot!(p, bundle.ξs, fba_avs, ls = :dash, color = colors[exp], label = "")
 #     Plots.scatter!(p, [Hd.val("xi", exp)], [Hd.val("D", exp)], color = colors[exp], label = "")
 # end
 # p
@@ -372,16 +372,16 @@ p = Plots.plot(ps..., size = [800,1600],
 # # tot_cos
 # ider = "tot_cost"
 # p = Plots.plot(xlabel = "xi", ylabel = "flx", title = ider)
-# for (exp, boundle) in boundles
+# for (exp, bundle) in bundles
 #     β = closest_βs[exp]
     
-#     ep_avs = Ch.Utils.av(boundle, boundle.ξs, β, :ep, ider)
-#     ep_stds = Ch.Utils.va(boundle, boundle.ξs, β, :ep, ider) .|> sqrt
+#     ep_avs = Ch.Utils.av(bundle, bundle.ξs, β, :ep, ider)
+#     ep_stds = Ch.Utils.va(bundle, bundle.ξs, β, :ep, ider) .|> sqrt
     
-#     fba_avs = Ch.Utils.av(boundle, boundle.ξs, :fba, ider)
+#     fba_avs = Ch.Utils.av(bundle, bundle.ξs, :fba, ider)
     
-#     Plots.plot!(p, boundle.ξs, ep_avs, color = colors[exp], label = "")
-#     Plots.plot!(p, boundle.ξs, fba_avs, ls = :dash, color = colors[exp], label = "")
+#     Plots.plot!(p, bundle.ξs, ep_avs, color = colors[exp], label = "")
+#     Plots.plot!(p, bundle.ξs, fba_avs, ls = :dash, color = colors[exp], label = "")
 #     Plots.scatter!(p, [Hd.val("xi", exp)], [Hd.val("D", exp)], color = colors[exp], label = "")
 # end
 # p
@@ -389,16 +389,16 @@ p = Plots.plot(ps..., size = [800,1600],
 # # Measured metabolites
 # Hd_met = Hd.msd_mets[3]
 # p = Plots.plot(xlabel = "xi", ylabel = "conc", title = Hd_met, xaxis = [0.0, 100])
-# for (exp, boundle) in boundles
+# for (exp, bundle) in bundles
 #     β = closest_βs[exp]
     
 #     # ep
-#     model_concs, model_conc_stds = conc(Hd_met, exp, boundle.ξs, β, :ep)
-#     Plots.plot!(p, boundle.ξs, model_concs, yerr = model_conc_stds, color = colors[exp], label = "")
+#     model_concs, model_conc_stds = conc(Hd_met, exp, bundle.ξs, β, :ep)
+#     Plots.plot!(p, bundle.ξs, model_concs, yerr = model_conc_stds, color = colors[exp], label = "")
     
 #     # fba
-#     model_concs, model_conc_stds = conc(Hd_met, exp, boundle.ξs, :fba)
-#     Plots.plot!(p, boundle.ξs, model_concs, ls = :dash, color = colors[exp], label = "")
+#     model_concs, model_conc_stds = conc(Hd_met, exp, bundle.ξs, :fba)
+#     Plots.plot!(p, bundle.ξs, model_concs, ls = :dash, color = colors[exp], label = "")
     
 #     Plots.scatter!(p, [Hd.val("xi", exp)], [Hd.val("s$Hd_met", exp)], color = colors[exp], label = "", ms =8)
 # end
@@ -410,10 +410,10 @@ p = Plots.plot(ps..., size = [800,1600],
 # ider = params["obj_ider"]
 # p = Plots.plot(xlabel = "flx", ylabel = "pdf", title = ider, 
 #     xaxis = [-0.02, 0.32])
-# for (exp, boundle) in boundles |> sort
+# for (exp, bundle) in bundles |> sort
 #     ξ = Hd.val("xi", exp)
 #     β = closest_βs[exp]
-#     Ch.Plots.plot_marginal!(p, boundle, ξ, β, [:ep], ider, color = colors[exp], label = false)
+#     Ch.Plots.plot_marginal!(p, bundle, ξ, β, [:ep], ider, color = colors[exp], label = false)
 #     vline!([Hd.val("D", exp)], label = "", ls = :dash, color = colors[exp], lw = 2)
 #     Plots.plot!(p, [], [], label = exp, lw = 5, legendtitle = "exps")
 # end
@@ -423,10 +423,10 @@ p = Plots.plot(ps..., size = [800,1600],
 # model = deserialize(iJR.BASE_MODEL_FILE)
 # ider = rand(model.rxns)
 # p = Plots.plot(xlabel = "flx", ylabel = "pdf", title = ider)
-# for (exp, boundle) in boundles |> sort
+# for (exp, bundle) in bundles |> sort
 #     ξ = Hd.val("xi", exp)
 #     β = closest_βs[exp]
-#     Ch.Plots.plot_marginal!(p, boundle, ξ, β, [:ep, :fba], ider,  label = false)
+#     Ch.Plots.plot_marginal!(p, bundle, ξ, β, [:ep, :fba], ider,  label = false)
 #     Plots.plot!(p, [], [], label = exp, lw = 5, legendtitle = "exps")
 # end
 # p
