@@ -11,6 +11,10 @@ Chemostat = "c5987326-81b3-11ea-28dd-b531745de20f"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+MathProgBase = "fdba3010-5040-5b88-9595-932c9decdf73"
+Measures = "442fdcdd-2543-5da2-b0f3-8c86c306513e"
+PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 julia = "1.1"

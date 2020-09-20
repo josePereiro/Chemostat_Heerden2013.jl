@@ -1,4 +1,6 @@
 # (GEM) iJR904 (Reed et al., 2003) (download link: https://darwin.di.uminho.pt/models)
+# TODO: change to alternative link!!!
+# (GEM) Alternative link http://bigg.ucsd.edu/static/models/iJR904.mat
 
 module Chemostat_Heerden2013
 

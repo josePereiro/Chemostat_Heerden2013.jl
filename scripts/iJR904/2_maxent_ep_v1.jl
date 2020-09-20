@@ -1,8 +1,30 @@
+## ------------------------------------------------------------------
+## ARGS
+using ArgParse
 
+set = ArgParseSettings()
+@add_arg_table! set begin
+    "-w", "--workers"
+        help = "number of workers to use"
+        default = "1"
+    "--init-clear"
+        help = "clear cache before running the simulation"   
+        action = :store_true
+    "--finish-clear"
+        help = "clear cache at the end"   
+        action = :store_true
+end
+parsed_args = parse_args(set)
+wcount = parse(Int, parsed_args["workers"])
+init_clear_flag = parsed_args["init-clear"]
+finish_clear_flag = parsed_args["finish-clear"]
+
+## -------------------------------------------------------------------
 using Distributed
 
-NO_CORES = length(Sys.cpu_info()) - 1
-length(workers()) < NO_CORES && addprocs(NO_CORES - 1; exeflags = "--project")
+NO_WORKERS = wcount
+length(workers()) < NO_WORKERS && 
+    addprocs(NO_WORKERS; exeflags = "--project")
 println("Working in: ", workers())
 
 @everywhere begin
@@ -33,6 +55,13 @@ println("Working in: ", workers())
 
 end
 
+## ------------------------------------------------------------------
+# CLEAR CACHE (WARNING)
+if init_clear_flag
+    tagprintln_inmw("CLEARING CACHE ")
+    delete_temp_caches()
+    println_inmw("\n")
+end
 
 @everywhere begin
 
@@ -40,7 +69,7 @@ end
     # SIMULATION GLOBAL ID
     # This must uniquely identify this simulation version
     # It is used to avoid cache collisions
-    sim_global_id = "iJR904_maxent_fba_ep_v1"
+    sim_global_id = "iJR904_MAXENT_EP_FBA_V2"
     
     ## -------------------------------------------------------------------
     # PARAMS
@@ -68,7 +97,8 @@ end
                     )
         
         # Change here how many betas to model
-        PARAMS[exp][:βs] = collect(range(βlb, βub, length = 30)) 
+        βcount = 30
+        PARAMS[exp][:βs] = collect(range(βlb, βub, length = βcount)) 
     end
 
     # ep params
@@ -118,12 +148,23 @@ end
 end # @everywhere
 
 ## -------------------------------------------------------------------
+# SIM IDS
+# Collect all the computed simulation ids for collecting results
+const chnl = RemoteChannel() do
+    Channel{Any}(10)
+end
+const res_ids = []
+const collector = @async while true
+    id = take!(chnl)
+    push!(res_ids, id)
+end
+
+## -------------------------------------------------------------------
 # RUN SIMULATION
+empty!(res_ids)
+pmap(enumerate(cGLCs)) do (exp, cGLC) # This is parallizable
 
-windexes = pmap(enumerate(cGLCs)) do (exp, cGLC) # This is parallizable
-
-    EPOCHLEN = 40
-    index_id = (:INDEX, myid())
+    EPOCHLEN = 100
 
     exp_params = PARAMS[exp]
     ξs = exp_params[:ξs]
@@ -144,11 +185,10 @@ windexes = pmap(enumerate(cGLCs)) do (exp, cGLC) # This is parallizable
         "\n"
     )
 
-    exp_id = (exp, cGLC, sim_global_id, hash(PARAMS))
 
     for (ξi, ξ) in ξs |> enumerate
 
-        sim_id = (ξi, ξ, exp_id)
+        sim_id = string("exp: ", exp, " xi: [", ξi, "/", length(ξs), "] global_id: ", sim_global_id, "_", hash(PARAMS))
 
         tagprintln_inmw("PROCESSING XI", 
             "\nxi: ", ξ, " [", ξi, ",", length(ξs), "]",
@@ -172,47 +212,41 @@ windexes = pmap(enumerate(cGLCs)) do (exp, cGLC) # This is parallizable
         )
 
         ## CACHING RESULTS
+        res_id = (:RESULTS, sim_id)
         model = prepare_model(ξ, intake_info)
-        save_cache(sim_id, (exp, ξ, βs, model, dat); headline = "CATCHING RESULTS\n")
+        save_cache(res_id, (exp, ξ, βs, model, dat); headline = "CATCHING RESULTS\n")
 
         ## SAVING TO INDEX
-        index = load_cache(index_id; verbose = false)
-        index = isnothing(index) ? [] : index
-        push!(index, sim_id)
-        save_cache(index_id, index; verbose = false)
+        put!(chnl, res_id)
 
     end # ξs
 
-    return index_id
+    return nothing
 end # cGLCs map
 
 
 ## BOUNDLING
+sleep(1) # wait for collector to get all ids
 boundles = Dict()
-for index_id in windexes
+for id in res_ids
+    exp, ξ, βs, model, dat = load_cache(id; verbose = false)
 
-    index = load_cache(index_id; verbose = false)
-    isnothing(index) && continue
-    
-    for id in index
-        exp, ξ, βs, model, dat = load_cache(id; verbose = false)
-       
-        # boundling
-        boundle = get!(boundles, exp, ChstatBoundle())
+    # boundling
+    boundle = get!(boundles, exp, ChstatBoundle())
 
-        boundle[ξ, :net] = model
-        boundle[ξ, :fba] = dat[:fba]
+    boundle[ξ, :net] = model
+    boundle[ξ, :fba] = dat[:fba]
 
-        for (βi, β) in βs |> enumerate
-            boundle[ξ, β, :ep] = dat[(:ep, βi)]
-        end
-
+    for (βi, β) in βs |> enumerate
+        boundle[ξ, β, :ep] = dat[(:ep, βi)]
     end
 end
 
 ## SAVING
-save_data(iJR.MODEL_PROCESSED_DATA_DIR, boundles)
+save_data(iJR.MAXENT_FBA_EB_BOUNDLES_FILE, boundles)
 
-## DELETING CACHE
-delete_temp_caches()
-
+## CLEAR CACHE (WARNING)
+if finish_clear_flag
+    tagprintln_inmw("CLEARING CACHE ")
+    delete_temp_caches()
+end
