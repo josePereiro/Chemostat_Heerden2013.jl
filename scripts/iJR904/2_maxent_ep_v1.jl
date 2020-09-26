@@ -1,3 +1,6 @@
+using DrWatson 
+quickactivate(@__DIR__, "Chemostat_Heerden2013")
+
 ## ------------------------------------------------------------------
 ## ARGS
 using ArgParse

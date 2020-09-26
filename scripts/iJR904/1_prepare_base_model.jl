@@ -189,7 +189,7 @@ save_data(iJR.EXCH_MET_MAP_FILE, exch_met_map)
 
 
 ## -------------------------------------------------------------------
-## Saving model
+## FVA PREPROCESSING
 model = fva_preprocess(model, 
 #     eps = 1-9, # This avoid blocking totally any reaction
     verbose = true);
