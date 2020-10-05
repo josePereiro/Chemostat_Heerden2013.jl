@@ -11,8 +11,8 @@ using Serialization
 # julia Pkg REPL for installing the package
 import Chemostat
 import Chemostat.Utils: MetNet, to_symbol_dict, isrev, split_revs, rxn_mets,
-                        rxnindex, metindex, compress_dict, exchanges, expanded_model,
-                        uncompress_dict, Rxn, Met, findempty,
+                        rxnindex, metindex, compressed_copy, exchanges, expanded_model,
+                        uncompressed_copy, Rxn, Met, findempty,
                         av, va, nzabs_range, set_met!, set_rxn!,
                         struct_to_dict, isfixxed, ub, ub!, lb!, lb, FWD_SUFFIX, BKWD_SUFFIX
 
@@ -207,7 +207,7 @@ Chemostat.Utils.summary(model, fbaout)
 
 ## -------------------------------------------------------------------
 # Saving model
-dict_model = model |> struct_to_dict |> compress_dict
+dict_model = model |> struct_to_dict |> compressed_copy
 save_data(iJR.BASE_MODEL_FILE, dict_model);
 
 

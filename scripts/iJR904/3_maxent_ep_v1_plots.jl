@@ -62,11 +62,12 @@ end
 using Plots
 # pyplot()
 
-##
-colors = Dict(exp => rand([:black, :yellow, :blue, :red, :green, :gray, :orange])
-    for exp in exps)
-markers = Dict(exp => rand([:circle, :star, :square, :dot]) 
-    for exp in exps)
+## -------------------------------------------------------------------
+color_pool = [:orange, :blue, :red, :black, :violet, 
+    :gray, :green, :brown, :magenta];
+colors = Dict(exp => rand(color_pool) for exp in exps)
+marker_pool = [:circle, :star, :square, :dot]
+markers = Dict(exp => rand(marker_pool) for exp in exps)
 
 
 ## -------------------------------------------------------------------
