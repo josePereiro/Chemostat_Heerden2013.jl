@@ -18,7 +18,7 @@ Ch = Chemostat
 # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
 # package, then you must activate the package enviroment (see README)
 import Chemostat_Heerden2013: HeerdenData, BegData, iJR904, save_data, load_data
-import Chemostat_Heerden2013.iJR904: OBJ_IDER, ATPM_IDER, COST_IDER
+import Chemostat_Heerden2013.iJR904: BIOMASS_IDER, ATPM_IDER, COST_IDER
 const Hd  = HeerdenData;
 const iJR = iJR904
 
@@ -48,8 +48,8 @@ for exp in eachindex(Hd.val("cGLC"))
     ξ = Hd.val("xi", exp)
     closest_β = bundle.βs[1]
     for β in bundle.βs
-        μ = Ch.Utils.av(bundle, ξ, β, :ep, OBJ_IDER)
-        cμ = Ch.Utils.av(bundle, ξ, closest_β, :ep, OBJ_IDER)
+        μ = Ch.Utils.av(bundle, ξ, β, :ep, BIOMASS_IDER)
+        cμ = Ch.Utils.av(bundle, ξ, closest_β, :ep, BIOMASS_IDER)
         exp_μ = Hd.val("D", exp)
         
         abs(μ - exp_μ) < abs(cμ - exp_μ) && (closest_β = β)
@@ -107,7 +107,7 @@ for exp in eachindex(Hd.val("cGLC"))
     # model
     exp_ξ = Hd.val("xi", exp)
     bundle = bundles[exp]
-    μs = Ch.Utils.av(bundle, exp_ξ, bundle.βs, :ep, OBJ_IDER)
+    μs = Ch.Utils.av(bundle, exp_ξ, bundle.βs, :ep, BIOMASS_IDER)
     c = rand(colors)
     m = rand(markers)
     Plots.plot!(p, bundle.βs, μs, label = "", color = colors[exp], lw = 3)
@@ -291,7 +291,7 @@ plot(ep_p, fba_p, size = [600, 300])
 # +
 # Biomass
 ps = []
-ider = OBJ_IDER
+ider = BIOMASS_IDER
 ep_p = Plots.plot(xlabel = "exp (1/ h)", ylabel = "model (1/ h)", title = "EP ($ider)")
 fba_p = Plots.plot(xlabel = "exp (1/ h)", ylabel = "model (1/ h)", title = "FBA ($ider)")
 for (exp, bundle) in bundles

@@ -25,7 +25,7 @@ import Chemostat.LP: fba, fva_preprocess
 # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
 # package, then you must activate the package enviroment (see README)
 import Chemostat_Heerden2013: HeerdenData, BegData, iJR904, save_data, load_data
-import Chemostat_Heerden2013.iJR904: OBJ_IDER, ATPM_IDER, COST_IDER
+import Chemostat_Heerden2013.iJR904: BIOMASS_IDER, ATPM_IDER, COST_IDER
 const Hd  = HeerdenData;
 const Bd  = BegData
 const iJR = iJR904
@@ -49,10 +49,10 @@ tagprintln_inmw("MAT MODEL LOADED",
 # the maximal experimental growth rate in Heerden2013 is ~0.2 1/h
 # The raw model present a growth rate bigger than that, so it is ok
 # to use it directly as base model
-fbaout = fba(model, OBJ_IDER);
+fbaout = fba(model, BIOMASS_IDER);
 tagprintln_inmw("FBA SOLUTION", 
-    "\nobj_ider:         " , OBJ_IDER,
-    "\nfba obj_val:      ", av(model, fbaout, OBJ_IDER),
+    "\nobj_ider:         " , BIOMASS_IDER,
+    "\nfba obj_val:      ", av(model, fbaout, BIOMASS_IDER),
     "\nmax exp obj_val:  ", maximum(Hd.val("D"))
 )
 
@@ -105,7 +105,7 @@ for rxn in model.rxns
     # The exchanges, the atpm and the biomass are synthetic reactions, so, 
     # they have should not have an associated enzimatic cost 
     any(startswith.(rxn, ["EX_", "DM_"])) && continue
-    rxn == OBJ_IDER && continue
+    rxn == BIOMASS_IDER && continue
     rxn == ATPM_IDER && continue
         
     # Only the internal, non reversible reactions have an associated cost
@@ -194,10 +194,10 @@ model = fva_preprocess(model,
 #     eps = 1-9, # This avoid blocking totally any reaction
     verbose = true);
 
-fbaout = fba(model, OBJ_IDER, COST_IDER);
+fbaout = fba(model, BIOMASS_IDER, COST_IDER);
 tagprintln_inmw("FBA SOLUTION", 
-    "\nobj_ider:         " , OBJ_IDER,
-    "\nfba obj_val:      ", av(model, fbaout, OBJ_IDER),
+    "\nobj_ider:         " , BIOMASS_IDER,
+    "\nfba obj_val:      ", av(model, fbaout, BIOMASS_IDER),
     "\nmax exp obj_val:  ", maximum(Hd.val("D")),
     "\ncost_ider:         " , COST_IDER,
     "\nfba cost_val:      ", av(model, fbaout, COST_IDER),

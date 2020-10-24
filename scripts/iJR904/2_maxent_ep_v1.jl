@@ -51,7 +51,7 @@ println("Working in: ", workers())
 
     ## -------------------------------------------------------------------
     import Chemostat_Heerden2013: HeerdenData, BegData, iJR904, save_data, load_data
-    import Chemostat_Heerden2013.iJR904: OBJ_IDER, ATPM_IDER, COST_IDER
+    import Chemostat_Heerden2013.iJR904: BIOMASS_IDER, ATPM_IDER, COST_IDER
     const Hd  = HeerdenData;
     const iJR = iJR904
     set_cache_dir(iJR.MODEL_PROCESSED_DATA_DIR)
@@ -205,9 +205,9 @@ pmap(enumerate(cGLCs)) do (exp, cGLC) # This is parallizable
                     get_model = function()
                         return prepare_model(ξ, intake_info);
                     end,
-                    objider = OBJ_IDER,
+                    objider = BIOMASS_IDER,
                     costider = COST_IDER,
-                    beta_info = [(OBJ_IDER, βs)], # TODO: handle betas better 
+                    beta_info = [(BIOMASS_IDER, βs)], # TODO: handle betas better 
                     clear_cache = false,
                     use_seed = true,
                     epmodel_kwargs = epmodel_kwargs,
