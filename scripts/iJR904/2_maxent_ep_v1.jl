@@ -41,7 +41,7 @@ println("Working in: ", workers())
     import Chemostat
     import Chemostat.Utils: MetNet, EPModel, ChstatBundle,
                             rxnindex, metindex, compressed_copy, 
-                            uncompressed_copy, clampfileds!, well_scaled_model,
+                            uncompressed_copy, clampfields!, well_scaled_model,
                             ChstatBundle, norm1_stoi_err, av, va, nzabs_range,
                             struct_to_dict
     import Chemostat.SimulationUtils: epoch_converge_ep!, cached_simulation, set_cache_dir, 
