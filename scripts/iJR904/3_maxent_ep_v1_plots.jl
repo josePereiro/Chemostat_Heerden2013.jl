@@ -12,22 +12,27 @@ using Statistics
 # run add "https://github.com/josePereiro/Chemostat" in the 
 # julia Pkg REPL for installing the package
 import Chemostat
-Ch = Chemostat
-
+const Ch = Chemostat
+const ChU = Chemostat.Utils
+const ChSS = Chemostat.SteadyState
+const ChLP = Chemostat.LP
+const ChEP = Chemostat.MaxEntEP
+const ChSU = Chemostat.SimulationUtils
 
 # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
 # package, then you must activate the package enviroment (see README)
-import Chemostat_Heerden2013: HeerdenData, BegData, iJR904, save_data, load_data
-import Chemostat_Heerden2013.iJR904: BIOMASS_IDER, ATPM_IDER, COST_IDER
-const Hd  = HeerdenData;
-const iJR = iJR904
+## -------------------------------------------------------------------
+import Chemostat_Heerden2013
+const Hd  = Chemostat_Heerden2013.HeerdenData;
+const BD  = Chemostat_Heerden2013.BegData;
+const iJR = Chemostat_Heerden2013.iJR904
 
 ## -------------------------------------------------------------------
 notebook_name = "2_maxent_ep_v1_plots";
 
 ## -------------------------------------------------------------------
 # LOADING RESULTS
-bundles = load_data(iJR.MAXENT_FBA_EB_BOUNDLES_FILE)
+bundles = ChU.load_data(iJR.MAXENT_FBA_EB_BOUNDLES_FILE)
 # cache_file = joinpath(iJR.MODEL_PROCESSED_DATA_DIR, "maxent_ep_v1__cache4.jls")
 # params, bundles = deserialize(cache_file)
 # # bundles = deserialize(cache_file)
@@ -48,8 +53,8 @@ for exp in eachindex(Hd.val("cGLC"))
     ξ = Hd.val("xi", exp)
     closest_β = bundle.βs[1]
     for β in bundle.βs
-        μ = Ch.Utils.av(bundle, ξ, β, :ep, BIOMASS_IDER)
-        cμ = Ch.Utils.av(bundle, ξ, closest_β, :ep, BIOMASS_IDER)
+        μ = ChU.av(bundle, ξ, β, :ep, iJR.BIOMASS_IDER)
+        cμ = ChU.av(bundle, ξ, closest_β, :ep, iJR.BIOMASS_IDER)
         exp_μ = Hd.val("D", exp)
         
         abs(μ - exp_μ) < abs(cμ - exp_μ) && (closest_β = β)
@@ -81,8 +86,8 @@ function conc(Hd_met, exp, ξ::Real, data_idxs...)
     model_exch = iJR.exch_met_map[model_met]
     bundle = bundles[exp]
     
-    u = Ch.Utils.av(bundle, ξ, data_idxs..., model_exch) # exchange val
-    uerr = Ch.Utils.va(bundle, ξ, data_idxs..., model_exch) |> sqrt # exchange std
+    u = ChU.av(bundle, ξ, data_idxs..., model_exch) # exchange val
+    uerr = ChU.va(bundle, ξ, data_idxs..., model_exch) |> sqrt # exchange std
     c = Hd_met == "GLC" ? Hd.val("cGLC", exp) : 0.0
     return (max(c + u * ξ, 0.0), uerr * ξ)
 end
@@ -107,7 +112,7 @@ for exp in eachindex(Hd.val("cGLC"))
     # model
     exp_ξ = Hd.val("xi", exp)
     bundle = bundles[exp]
-    μs = Ch.Utils.av(bundle, exp_ξ, bundle.βs, :ep, BIOMASS_IDER)
+    μs = ChU.av(bundle, exp_ξ, bundle.βs, :ep, iJR.BIOMASS_IDER)
     c = rand(colors)
     m = rand(markers)
     Plots.plot!(p, bundle.βs, μs, label = "", color = colors[exp], lw = 3)
@@ -173,14 +178,14 @@ for (exp, bundle) in bundles
     
     
     for β in bundle.βs 
-        abs_errs_ = abs.(Ch.Utils.stoi_err(bundle, ξ, β, :ep))
+        abs_errs_ = abs.(ChU.stoi_err(bundle, ξ, β, :ep))
         
         max_abs_err_ = maximum(abs_errs_)
         mean_abs_err_ = mean(abs_errs_)
         std_abs_err_ = std(abs_errs_)
         
         
-        mean_abs_flxs_ = mean(abs.(Ch.Utils.av(bundle, ξ, β, :ep)))
+        mean_abs_flxs_ = mean(abs.(ChU.av(bundle, ξ, β, :ep)))
         
         push!(max_abs_errs_, max_abs_err_/ mean_abs_flxs_)
         push!(mean_abs_errs_, mean_abs_err_/ mean_abs_flxs_)
@@ -217,10 +222,10 @@ p
 
 #         metnet = bundle[ξ, :net)
 
-#         # errs_ = abs.(Ch.Utils.stoi_err(bundle, ξ, β, :ep))
+#         # errs_ = abs.(ChU.stoi_err(bundle, ξ, β, :ep))
 #         # Plots.scatter!(p, fill(β, length(errs_)), [errs_], color = colors[exp], label = "")
 
-#         # flxs_ = [abs.(Ch.Utils.av(bundle, ξ, β, :ep)) for β in bundle.βs]
+#         # flxs_ = [abs.(ChU.av(bundle, ξ, β, :ep)) for β in bundle.βs]
 #         # Plots.plot!(p, bundle.βs, mean.(flxs_), lw = 1, label = "", color = :blue)
 #         # Plots.plot!(p, bundle.βs, minimum.(flxs_), lw = 1, label = "", color = :red)
 #     end
@@ -232,7 +237,7 @@ p
 
 
 #     # gif 
-#     # yulims_ = Ch.Utils.logspace(-2.1, 0.3, 40) |> reverse # y axis upper limit
+#     # yulims_ = ChU.logspace(-2.1, 0.3, 40) |> reverse # y axis upper limit
 #     # yulims_ = [fill(maximum(yulims_), 25); yulims_]
 #     # yulims_ = [reverse(yulims_); yulims_]
 #     # yllim_ = -0.0001 # y axis lower bound
@@ -291,7 +296,7 @@ plot(ep_p, fba_p, size = [600, 300])
 # +
 # Biomass
 ps = []
-ider = BIOMASS_IDER
+ider = iJR.BIOMASS_IDER
 ep_p = Plots.plot(xlabel = "exp (1/ h)", ylabel = "model (1/ h)", title = "EP ($ider)")
 fba_p = Plots.plot(xlabel = "exp (1/ h)", ylabel = "model (1/ h)", title = "FBA ($ider)")
 for (exp, bundle) in bundles
@@ -300,14 +305,14 @@ for (exp, bundle) in bundles
     exp_av = Hd.val("D", exp)
     
     # EP
-    model_av = Ch.Utils.av(bundle, Hd.val(:xi, exp), closest_βs[exp], :ep, ider)
-    model_va = Ch.Utils.va(bundle, Hd.val(:xi, exp), closest_βs[exp], :ep, ider) .|> sqrt
+    model_av = ChU.av(bundle, Hd.val(:xi, exp), closest_βs[exp], :ep, ider)
+    model_va = ChU.va(bundle, Hd.val(:xi, exp), closest_βs[exp], :ep, ider) .|> sqrt
     
     Plots.scatter!(ep_p, [exp_av], [model_av], 
                 label = "", color = colors[exp], yerr = model_va, ms = 5)
     
     # FBA
-    model_av = Ch.Utils.av(bundle,Hd.val(:xi, exp), :fba, ider)
+    model_av = ChU.av(bundle,Hd.val(:xi, exp), :fba, ider)
     Plots.scatter!(fba_p, [exp_av], [model_av], marker = :star,
                 label = "", color = colors[exp], ls = :dash, ms = 5)
     
@@ -359,10 +364,10 @@ p = Plots.plot(ps..., size = [800,1600],
 # for (exp, bundle) in bundles
 #     β = closest_βs[exp]
     
-#     ep_avs = Ch.Utils.av(bundle, bundle.ξs, β, :ep, ider)
-#     ep_stds = Ch.Utils.va(bundle, bundle.ξs, β, :ep, ider) .|> sqrt
+#     ep_avs = ChU.av(bundle, bundle.ξs, β, :ep, ider)
+#     ep_stds = ChU.va(bundle, bundle.ξs, β, :ep, ider) .|> sqrt
     
-#     fba_avs = Ch.Utils.av(bundle, bundle.ξs, :fba, ider)
+#     fba_avs = ChU.av(bundle, bundle.ξs, :fba, ider)
     
 #     Plots.plot!(p, bundle.ξs, ep_avs, color = colors[exp], label = "")
 #     Plots.plot!(p, bundle.ξs, fba_avs, ls = :dash, color = colors[exp], label = "")
@@ -376,10 +381,10 @@ p = Plots.plot(ps..., size = [800,1600],
 # for (exp, bundle) in bundles
 #     β = closest_βs[exp]
     
-#     ep_avs = Ch.Utils.av(bundle, bundle.ξs, β, :ep, ider)
-#     ep_stds = Ch.Utils.va(bundle, bundle.ξs, β, :ep, ider) .|> sqrt
+#     ep_avs = ChU.av(bundle, bundle.ξs, β, :ep, ider)
+#     ep_stds = ChU.va(bundle, bundle.ξs, β, :ep, ider) .|> sqrt
     
-#     fba_avs = Ch.Utils.av(bundle, bundle.ξs, :fba, ider)
+#     fba_avs = ChU.av(bundle, bundle.ξs, :fba, ider)
     
 #     Plots.plot!(p, bundle.ξs, ep_avs, color = colors[exp], label = "")
 #     Plots.plot!(p, bundle.ξs, fba_avs, ls = :dash, color = colors[exp], label = "")

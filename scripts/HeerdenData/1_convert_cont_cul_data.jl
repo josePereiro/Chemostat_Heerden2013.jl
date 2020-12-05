@@ -1,18 +1,17 @@
+import DrWatson: quickactivate
+quickactivate(@__DIR__, "Chemostat_Heerden2013")
+
+## ------------------------------------------------------------------
 using CSV
 using DataFrames
 
 # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
 # package, then you must activate the package enviroment (see README)
-import Chemostat_Heerden2013
-Hd = Chemostat_Heerden2013.HeerdenData;
+import Chemostat_Heerden2013: HeerdenData
+const Hd = HeerdenData
 
-# This just check that the script is run in the
-# package enviroment
-Chemostat_Heerden2013.check_env()
-
-# ---
-# ## Load data
-# ---
+## ------------------------------------------------------------------
+# Load data
 # Data taken from Heerden2013 https://doi.org/10.1186/1475-2859-12-80.
 
 # Table 2 Steady state results from continuous fermentations
@@ -24,11 +23,10 @@ for n in names(orig_data)
 end
 first(orig_data, 6)
 
-# ---
-# ## Convert data
-# ---
+## ------------------------------------------------------------------
+# Convert data
 
-## Converting data c(g/L) / MM (g/mol) -> c(mM)
+# Converting data c(g/L) / MM (g/mol) -> c(mM)
 conv_data = DataFrame(orig_data)
 conv_data[3:end, :cGLC] .= orig_data[3:end, :cGLC] .* 1e3/ 180;
 conv_data[3:end, :sGLC] .= orig_data[3:end, :sGLC] .* 1e3/ 180;
@@ -39,9 +37,8 @@ conv_data[3:end, :sMA] .= orig_data[3:end, :sMA] .* 1e3/ 134.09;
 conv_data[2, [:cGLC, :sGLC,:sSA,:sAcA,:sFA,:sMA]] .= "mM"
 first(conv_data, 6)
 
-# ---
-# ## Saving
-# ---
+## ------------------------------------------------------------------
+# Saving
 
 CSV.write(Hd.HEERDEN_CONT_CUL_DATA_CONV_FILE, conv_data, delim = "\t");
 println(relpath(Hd.HEERDEN_CONT_CUL_DATA_CONV_FILE), " created!!!")

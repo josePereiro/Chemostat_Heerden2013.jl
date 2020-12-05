@@ -1,8 +1,8 @@
-using DrWatson 
+import DrWatson: quickactivate
 quickactivate(@__DIR__, "Chemostat_Heerden2013")
 
 ## ------------------------------------------------------------------
-## ARGS
+# ARGS
 using ArgParse
 
 set = ArgParseSettings()
@@ -17,55 +17,66 @@ set = ArgParseSettings()
         help = "clear cache at the end"   
         action = :store_true
 end
-parsed_args = parse_args(set)
-wcount = parse(Int, parsed_args["workers"])
-init_clear_flag = parsed_args["init-clear"]
-finish_clear_flag = parsed_args["finish-clear"]
 
-## -------------------------------------------------------------------
+if isinteractive()
+    # Dev vals
+    wcount = 1
+    init_clear_flag = false
+    finish_clear_flag = false
+else
+    parsed_args = parse_args(set)
+    wcount = parse(Int, parsed_args["workers"])
+    init_clear_flag = parsed_args["init-clear"]
+    finish_clear_flag = parsed_args["finish-clear"]
+end
+
 using Distributed
+## -------------------------------------------------------------------
 
 NO_WORKERS = wcount
 length(workers()) < NO_WORKERS && 
-    addprocs(NO_WORKERS; exeflags = "--project")
+addprocs(NO_WORKERS; exeflags = "--project")
 println("Working in: ", workers())
+
+## -------------------------------------------------------------------
+
+# Precompile in master
+import Chemostat_Heerden2013
 
 @everywhere begin
     
-    using DrWatson 
+    import DrWatson: quickactivate 
     quickactivate(@__DIR__, "Chemostat_Heerden2013")
 
     using SparseArrays
     
     ## -------------------------------------------------------------------
     import Chemostat
-    import Chemostat.Utils: MetNet, EPModel, ChstatBundle,
-                            rxnindex, metindex, compressed_copy, 
-                            uncompressed_copy, clampfields!, well_scaled_model,
-                            ChstatBundle, norm1_stoi_err, av, va, nzabs_range,
-                            struct_to_dict
-    import Chemostat.SimulationUtils: epoch_converge_ep!, cached_simulation, set_cache_dir, 
-                            tagprintln_inmw, println_inmw, tagprintln_ifmw, println_ifmw,
-                            save_cache, load_cache, delete_temp_caches
-    import Chemostat.SteadyState: apply_bound!
+    const ChU = Chemostat.Utils
+    const ChSS = Chemostat.SteadyState
+    const ChLP = Chemostat.LP
+    const ChEP = Chemostat.MaxEntEP
+    const ChSU = Chemostat.SimulationUtils
 
     ## -------------------------------------------------------------------
-    import Chemostat_Heerden2013: HeerdenData, BegData, iJR904, save_data, load_data
-    import Chemostat_Heerden2013.iJR904: BIOMASS_IDER, ATPM_IDER, COST_IDER
-    const Hd  = HeerdenData;
-    const iJR = iJR904
-    set_cache_dir(iJR.MODEL_PROCESSED_DATA_DIR)
+    import Chemostat_Heerden2013
+    const Hd  = Chemostat_Heerden2013.HeerdenData;
+    const BD  = Chemostat_Heerden2013.BegData;
+    const iJR = Chemostat_Heerden2013.iJR904
+    ChU.set_cache_dir(iJR.CACHE_DIR)
 
 end
 
 ## ------------------------------------------------------------------
 # CLEAR CACHE (WARNING)
 if init_clear_flag
-    tagprintln_inmw("CLEARING CACHE ")
-    delete_temp_caches()
-    println_inmw("\n")
+    ChU.tagprintln_inmw("CLEARING CACHE ")
+    ChU.delete_temp_caches()
+    ChU.println_inmw("\n")
 end
 
+## ------------------------------------------------------------------
+# GLOBALS
 @everywhere begin
 
     ## ------------------------------------------------------------------
@@ -119,8 +130,11 @@ end
 
     # ξs
     for (exp, cGLC) in cGLCs |> enumerate
-        # Change here how many xi to model, you should always include the experimental xi
-        PARAMS[exp][:ξs] = [Hd.val("xi", exp); range(1, 100, length = 10)] |> sort
+        # Change here how many xi to model, 
+        # you should always include the experimental xi
+        ξcount = 10
+        # PARAMS[exp][:ξs] = [Hd.val("xi", exp); range(1, 100, length = ξcount)] |> sort
+        PARAMS[exp][:ξs] = [Hd.val("xi", exp)] |> sort
     end
 
     # Intake info 
@@ -139,10 +153,10 @@ end
     # PREPARE MODEL FUNCTION
     function prepare_model(ξ, intake_info)
         
-        dat = load_data(iJR.BASE_MODEL_FILE; verbose = false)
-        model = MetNet(;dat...)
+        dat = ChU.load_data(iJR.BASE_MODEL_FILE; verbose = false)
+        model = ChU.MetNet(;dat...)
         
-        apply_bound!(model, ξ, intake_info; 
+        ChSS.apply_bound!(model, ξ, intake_info; 
         emptyfirst = true, ignore_miss = true)
         
         return model
@@ -177,7 +191,7 @@ pmap(enumerate(cGLCs)) do (exp, cGLC) # This is parallizable
     epmodel_kwargs = Dict(k => exp_params[k] for k in [:alpha])
     epconv_kwargs = Dict(k => exp_params[k] for k in [:epsconv])
 
-    tagprintln_inmw("PROCESSING EXPERIMENT", 
+    ChU.tagprintln_inmw("PROCESSING EXPERIMENT", 
         "\nexp:        ", exp,
         "\ncGLC:       ", cGLC,
         "\nxi count:   ", length(ξs),
@@ -191,23 +205,22 @@ pmap(enumerate(cGLCs)) do (exp, cGLC) # This is parallizable
 
     for (ξi, ξ) in ξs |> enumerate
 
-        sim_id = string("exp: ", exp, " xi: [", ξi, "/", length(ξs), "] global_id: ", sim_global_id, "_", hash(PARAMS))
+        sim_id = string("exp: ", exp, " xi: [", ξi, "/", length(ξs), "] ",
+                    "global_id: ", sim_global_id, "_", hash(PARAMS))
 
-        tagprintln_inmw("PROCESSING XI", 
+        ChU.tagprintln_inmw("PROCESSING XI", 
             "\nxi: ", ξ, " [", ξi, ",", length(ξs), "]",
             "\n"
         )
 
-        dat = cached_simulation(;
+        dat = ChSU.cached_simulation(;
                     epochlen = EPOCHLEN, # TODO: handle better
                     verbose = true,
                     sim_id = sim_id,
-                    get_model = function()
-                        return prepare_model(ξ, intake_info);
-                    end,
-                    objider = BIOMASS_IDER,
-                    costider = COST_IDER,
-                    beta_info = [(BIOMASS_IDER, βs)], # TODO: handle betas better 
+                    get_model = () -> prepare_model(ξ, intake_info),
+                    objider = iJR.BIOMASS_IDER,
+                    costider = iJR.COST_IDER,
+                    beta_info = [(iJR.BIOMASS_IDER, βs)],
                     clear_cache = false,
                     use_seed = true,
                     epmodel_kwargs = epmodel_kwargs,
@@ -217,7 +230,8 @@ pmap(enumerate(cGLCs)) do (exp, cGLC) # This is parallizable
         ## CACHING RESULTS
         res_id = (:RESULTS, sim_id)
         model = prepare_model(ξ, intake_info)
-        save_cache(res_id, (exp, ξ, βs, model, dat); headline = "CATCHING RESULTS\n")
+        ChU.save_cache(res_id, (exp, ξ, βs, model, dat); 
+            headline = "CATCHING RESULTS\n")
 
         ## SAVING TO INDEX
         put!(chnl, res_id)
@@ -227,15 +241,15 @@ pmap(enumerate(cGLCs)) do (exp, cGLC) # This is parallizable
     return nothing
 end # cGLCs map
 
-
-## BOUNDLING
+## -------------------------------------------------------------------
+# BOUNDLING
 sleep(1) # wait for collector to get all ids
 bundles = Dict()
 for id in res_ids
-    exp, ξ, βs, model, dat = load_cache(id; verbose = false)
+    exp, ξ, βs, model, dat = ChU.load_cache(id; verbose = false)
 
     # boundling
-    bundle = get!(bundles, exp, ChstatBundle())
+    bundle = get!(bundles, exp, ChU.ChstatBundle())
 
     bundle[ξ, :net] = model
     bundle[ξ, :fba] = dat[:fba]
@@ -246,10 +260,10 @@ for id in res_ids
 end
 
 ## SAVING
-save_data(iJR.MAXENT_FBA_EB_BOUNDLES_FILE, bundles)
+ChU.save_data(iJR.MAXENT_FBA_EB_BOUNDLES_FILE, bundles)
 
 ## CLEAR CACHE (WARNING)
 if finish_clear_flag
-    tagprintln_inmw("CLEARING CACHE ")
-    delete_temp_caches()
+    ChU.tagprintln_inmw("CLEARING CACHE ")
+    ChU.delete_temp_caches()
 end

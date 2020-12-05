@@ -5,10 +5,12 @@
 module Chemostat_Heerden2013
 
 using DrWatson
+import Chemostat
 
 include("Utils/Utils.jl")
 include("BegData/BegData.jl")
 include("HeerdenData/HeerdenData.jl")
 include("iJR904/iJR904.jl")
+include("EColiCore/EColiCore.jl")
 
 end # module

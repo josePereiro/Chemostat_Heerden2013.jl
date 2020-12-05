@@ -156,10 +156,10 @@ beg_rxns_map = Dict("carbonyl reductase (NADPH)"=>["P5CR"],
 
 # base model exch met map
 # A quick way to get exchages from mets and te other way around
-exch_met_map = nothing
-function load_exch_met_map()
-    !isfile(EXCH_MET_MAP_FILE) && return nothing
-    global exch_met_map = load_data(EXCH_MET_MAP_FILE; verbose = false)
+const exch_met_map = Dict()
+function _load_exch_met_map()
+    !isfile(EXCH_MET_MAP_FILE) && return exch_met_map
+    empty!(exch_met_map)
+    merge!(exch_met_map, load_data(EXCH_MET_MAP_FILE; verbose = false))
     return exch_met_map
 end
-load_exch_met_map()
