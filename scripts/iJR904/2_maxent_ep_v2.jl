@@ -53,7 +53,7 @@ let
         objidx = ChU.rxnindex(model, iJR.BIOMASS_IDER)
         M, N = size(model)
             
-        imverbose && @info "Doing" threadid() exp cGLC 
+        imverbose && @info "Doing" threadid() exp cGLC length(DATA)
         D = get!(DATA, exp, Dict())
 
         # prepare model
@@ -68,7 +68,7 @@ let
         x0 = [0.0]
         x1 = [10.0]
         C = [5e3]
-        th = 1e-4
+        th = 1e-3
         epout_seed = nothing
         target = [Hd.val("D", exp)]
         beta_vec = zeros(size(model, 2))
@@ -82,11 +82,11 @@ let
                 epout = ChEP.maxent_ep(model; 
                     beta_vec,
                     alpha = Inf,
-                    damp = 0.98,
-                    epsconv = 1e-4, 
+                    damp = 0.985,
+                    epsconv = 1e-5, 
                     verbose = imverbose && isempty(epouts), 
                     solution = epout_seed,
-                    maxiter = 3000
+                    maxiter = 5000
                 )
                 epouts[beta] = epout
             end
