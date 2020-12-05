@@ -7,4 +7,9 @@ module HeerdenData
 
     include("dirs_and_files_names.jl")
     include("data_interface.jl")
+
+    function __init__()
+        _load_cont_cul_data()
+    end
+
 end
