@@ -3,7 +3,9 @@
 
 ## ------------------------------------------------------------------
 # Load data
-cont_cul_data = CSV.read(HEERDEN_CONT_CUL_DATA_CONV_FILE, DataFrame; delim = '\t', comment = "#")
+cont_cul_data = isfile(HEERDEN_CONT_CUL_DATA_CONV_FILE) ? 
+    CSV.read(HEERDEN_CONT_CUL_DATA_CONV_FILE, DataFrame; delim = '\t', comment = "#") :
+    DataFrame()
 
 ## ------------------------------------------------------------------
 # Interface
