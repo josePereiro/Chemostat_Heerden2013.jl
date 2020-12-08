@@ -35,8 +35,8 @@ function _load_cont_cul_data()
         xi = val(:xi)
         for met in msd_mets
             umet = Symbol("u$met")
-            cmet = Symbol("c$met")
             smet = Symbol("s$met")
+            cmet = Symbol("c$met")
             s = val(smet)
             c = string(cmet) in names(cont_cul_data) ? val(cmet) : zero(s)
             cont_cul_data[umet] = ["Exchange"; "mmol/gDW hr"; (s .- c) ./ xi];
