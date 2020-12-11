@@ -39,7 +39,7 @@ function _load_cont_cul_data()
             cmet = Symbol("c$met")
             s = val(smet)
             c = string(cmet) in names(cont_cul_data) ? val(cmet) : zero(s)
-            cont_cul_data[umet] = ["Exchange"; "mmol/gDW hr"; (s .- c) ./ xi];
+            cont_cul_data[!, umet] = ["Exchange"; "mmol/gDW hr"; (s .- c) ./ xi];
         end
     end
 

@@ -25,15 +25,6 @@ using Plots
 DATA = ChU.load_data(iJR.MAXENT_FBA_EB_BOUNDLES_FILE)
 SDATA = sort(collect(DATA); by = first);
 
-## ------------------------------------------------------------------
-# BKDATA = deepcopy(DATA)
-## ------------------------------------------------------------------
-# DATA = Dict()
-# for (exp, D) in BKDATA
-#     length(keys(D)) < 4 && continue
-#     DATA[exp] = D
-# end
-# SDATA = sort(collect(DATA); by = first);
 ## -------------------------------------------------------------------
 # flux vs beta
 let
