@@ -43,9 +43,6 @@ function partial_test(model, title  = "PARTIAL TEST")
     )
 end
 
-my_try(f; max_len = 500) = try; (f(); return true) catch err; 
-    (@error(err_str(err; max_len)); return false) end
-
 ## ----------------------------------------------------------------------
 function prepare_model(exp; verbose = true)
     # prepare model
@@ -75,7 +72,9 @@ let
     damp = 0.99
     epouts = Dict()
     fbaout = ChLP.fba(model, obj_idx)
-    partial_test(model)
+    partial_test(model); println()
+
+    
 
     # seed
     seed_file = joinpath(iJR.MODEL_PROCESSED_DATA_DIR, "ept0_epout_seed.bson")
@@ -87,6 +86,8 @@ let
     end
     
     # Simulations
+    write_lock = ReentrantLock()
+
     beta_range = [0.0; 10.0.^(-1:0.1:10)]
     var_orders = collect(5:25)
     
@@ -104,13 +105,26 @@ let
         D["epouts"] = Dict()
         for beta in beta_range
             beta_vec[obj_idx] = beta
+
+            lock(write_lock) do
+                @info "Doing" threadid() var_order beta
+                println()
+            end
             
-            my_try() do
+            try
                 epoutT0 = ChEP.maxent_ep(lmodel; alpha, beta_vec, 
                     epsconv, minvar, maxvar, solution = epoutT0,
                     verbose = false
                 )
-            end && epoutT0.status == ChEP.CONVERGED_STATUS || break
+            catch err
+                lock(write_lock) do
+                    @info string("At threadid() = ", threadid())
+                    @error err_str(err; max_len = 500)
+                    println()
+                end
+                break
+            end
+            epoutT0.status != ChEP.CONVERGED_STATUS && break
 
             D["epouts"][beta] = epoutT0
         end
@@ -125,5 +139,10 @@ let
         fname = savename("exploration_", (;var_order), "bson")
         fpath = joinpath(iJR.MODEL_PROCESSED_DATA_DIR, fname)
         ChU.save_data(fpath, D)
-    end
+
+        lock(write_lock) do
+            println()
+        end
+
+    end # @threads for var_order in var_orders
 end
