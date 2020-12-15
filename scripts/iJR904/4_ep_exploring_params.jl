@@ -3,25 +3,30 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
 
 import SparseArrays
 import Base.Threads: @threads, threadid, SpinLock
+using Serialization
 
-## -------------------------------------------------------------------
+# -------------------------------------------------------------------
 # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
 # package, then you must activate the package enviroment (see README)
-import Chemostat_Heerden2013
-const Hd  = Chemostat_Heerden2013.HeerdenData;
-const BD  = Chemostat_Heerden2013.BegData;
-const iJR = Chemostat_Heerden2013.iJR904
+@time begin
+    import Chemostat_Heerden2013
+    const Hd  = Chemostat_Heerden2013.HeerdenData;
+    const BD  = Chemostat_Heerden2013.BegData;
+    const iJR = Chemostat_Heerden2013.iJR904
+end
 
-## -------------------------------------------------------------------
+# -------------------------------------------------------------------
 # run add "https://github.com/josePereiro/Chemostat" in the 
 # julia Pkg REPL for installing the package
-import Chemostat
-import Chemostat.LP.MathProgBase
-const ChU = Chemostat.Utils
-const ChSS = Chemostat.SteadyState
-const ChLP = Chemostat.LP
-const ChEP = Chemostat.MaxEntEP
-const ChSU = Chemostat.SimulationUtils
+@time begin
+    import Chemostat
+    import Chemostat.LP.MathProgBase
+    const ChU = Chemostat.Utils
+    const ChSS = Chemostat.SteadyState
+    const ChLP = Chemostat.LP
+    const ChEP = Chemostat.MaxEntEP
+    const ChSU = Chemostat.SimulationUtils
+end
 
 ## ----------------------------------------------------------------------
 # Tooling
@@ -58,44 +63,53 @@ function prepare_model(exp; verbose = true)
 end
 
 ## ----------------------------------------------------------------------
-# # Data
 let
     # setup
     exp = 1    
-    # D = get!(DATA, "iJR904", Dict())
     model = prepare_model(exp)
+    M, N = size(model)
     obj_ider = iJR.BIOMASS_IDER
     obj_idx = ChU.rxnindex(model, obj_ider)
     alpha = Inf
-    epsconv = 1e-5
-    maxiter = Int(1e7)
+    maxiter = Int(1e6)
+    minvar, maxvar = 1e-45, 1e45
     damp = 0.99
-    epouts = Dict()
     fbaout = ChLP.fba(model, obj_idx)
     partial_test(model); println()
-
     
 
     # seed
     seed_file = joinpath(iJR.MODEL_PROCESSED_DATA_DIR, "ept0_epout_seed.bson")
     if !isfile(seed_file)
-        seed = ChEP.maxent_ep(model; alpha, epsconv, damp, maxiter)
+        seed = ChEP.maxent_ep(model; alpha, epsconv = 1e4, damp, maxiter = Int(1e7))
         ChU.save_data(seed_file, seed)
     else
         seed = ChU.load_data(seed_file)
     end
+    println()
     
     # Simulations
     write_lock = ReentrantLock()
 
-    beta_range = [0.0; 10.0.^(-1:0.1:10)]
-    var_orders = collect(5:25)
-    
-    @threads for var_order in var_orders
+    # @threads 
+    # epsconvs = collect(10.0.^-(4:7))
+    epsconvs = [10.0 100.0]
+    @threads for epsconv in epsconvs
 
+        # cache
+        fname = savename("exploration_", (;epsconv), "jld")
+        fpath = joinpath(iJR.MODEL_PROCESSED_DATA_DIR, fname)
+        if isfile(fpath)
+            lock(write_lock) do
+                @info "Cache found SKIPING" threadid() epsconv fname
+                println()
+            end
+            continue
+        end
+
+        beta_range = [0.0; 10.0.^(-1:0.1:30)]
+        
         lmodel = deepcopy(model)
-        M, N = size(model)
-        minvar, maxvar = 10.0^(-var_order), 10.0^(var_order)
 
         # MaxEnt EP
         beta_vec = zeros(N)
@@ -103,28 +117,43 @@ let
 
         D = Dict()
         D["epouts"] = Dict()
+        D["error"] = ""
         for beta in beta_range
-            beta_vec[obj_idx] = beta
+            beta_vec[obj_idx] = beta 
 
             lock(write_lock) do
-                @info "Doing" threadid() var_order beta
+                @info "Doing" threadid() epsconv beta length(D["epouts"]) epoutT0.iter
                 println()
             end
             
             try
-                epoutT0 = ChEP.maxent_ep(lmodel; alpha, beta_vec, 
-                    epsconv, minvar, maxvar, solution = epoutT0,
+                epoutT0 = ChEP.maxent_ep(
+                    lmodel; 
+                    alpha, beta_vec, 
+                    epsconv, minvar, maxvar, 
+                    solution = epoutT0,
+                    maxiter, damp,
+                    iter0 = 0,
                     verbose = false
                 )
+                if epoutT0.status != ChEP.CONVERGED_STATUS 
+                    lock(write_lock) do
+                        @info string("At threadid() = ", threadid()) epoutT0.status
+                        println()
+                        D["error"] = "status = $(epoutT0.status)"
+                    end
+                    break
+                end
             catch err
                 lock(write_lock) do
                     @info string("At threadid() = ", threadid())
-                    @error err_str(err; max_len = 500)
+                    msg = err_str(err; max_len = 500)
+                    @error msg
+                    D["error"] = msg
                     println()
                 end
                 break
             end
-            epoutT0.status != ChEP.CONVERGED_STATUS && break
 
             D["epouts"][beta] = epoutT0
         end
@@ -132,16 +161,18 @@ let
         # store and save
         D["beta_range"] = collect(keys(D["epouts"])) |> unique |> sort
         D["model"] = lmodel
+        D["fbaout"] = fbaout
         D["minvar"], D["maxvar"] = minvar, maxvar
         D["epsconv"] = epsconv
         D["alpha"] = alpha
 
-        fname = savename("exploration_", (;var_order), "bson")
-        fpath = joinpath(iJR.MODEL_PROCESSED_DATA_DIR, fname)
-        ChU.save_data(fpath, D)
+        # store
+        serialize(fpath, D)
 
         lock(write_lock) do
             println()
+            @info "Finished" threadid() epsconv length(D["epouts"]) fname
+            println() 
         end
 
     end # @threads for var_order in var_orders
