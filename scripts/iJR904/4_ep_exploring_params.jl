@@ -92,8 +92,7 @@ let
     write_lock = ReentrantLock()
 
     # @threads 
-    # epsconvs = collect(10.0.^-(4:7))
-    epsconvs = [10.0 100.0]
+    epsconvs = collect(10.0.^-(4:0.5:7))
     @threads for epsconv in epsconvs
 
         # cache
