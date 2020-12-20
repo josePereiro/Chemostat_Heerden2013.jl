@@ -2,7 +2,6 @@ import DrWatson: quickactivate, savename
 quickactivate(@__DIR__, "Chemostat_Heerden2013")
 
 import SparseArrays
-import Base.Threads: @threads, threadid, SpinLock
 
 # -------------------------------------------------------------------
 # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
@@ -26,6 +25,7 @@ const ChSU = Chemostat.SimulationUtils
 using Plots
 using Plots.Measures
 using Serialization
+using Statistics
 
 ## -------------------------------------------------------------------
 var_order = 49
@@ -52,7 +52,9 @@ EPS = 1e-8
 # abs(fba - ep) / ex_glc
 let
     p = plot(title = iJR.PROJ_IDER, 
-        xlabel = "beta", ylabel = "abs(fba - ep) / ex_glc")
+        xlabel = "log10( beta )", 
+        ylabel = "log10( abs( fba - ep ) / ex_glc )"
+    )
     f(x) = log10(x)
     mat = zeros(length(sepouts), N)
     for (i, (beta, epout)) in enumerate(sepouts)
@@ -68,10 +70,12 @@ let
 end
 
 ## -------------------------------------------------------------------
-# abs(fba - ep) / max diff
+# abs(fba - ep) / max_diff
 let
     p1 = plot(title = iJR.PROJ_IDER, 
-        xlabel = "beta", ylabel = "abs(fba - ep) / max diff")
+        xlabel = "beta", 
+        ylabel = "abs( fba - ep ) / max_diff"
+    )
     f(x) = x
     mat = zeros(length(sepouts), N)
     for (i, (beta, epout)) in enumerate(sepouts)
@@ -92,8 +96,8 @@ let
     kwargs = (;
         normalize = :pdf,
         bins = 200,
-        xlabel = "prob",
-        ylabel = "abs(fba - ep) / max diff",
+        xlabel = "prob. density",
+        ylabel = "abs( fba - ep ) / max_diff",
         legend = :best, 
         orientation = :h, 
         color = :black
@@ -107,7 +111,7 @@ let
         kwargs...
     )
     plot([p1, p2, p3]..., layout = grid(1, 3), size = [1200, 400], 
-        margin = 3mm
+        margin = 5mm
     )
 end
 
@@ -115,7 +119,7 @@ end
 # stoi err
 let
     p = plot(title = iJR.PROJ_IDER, 
-        xlabel = "beta", ylabel = "stoi_err / ex_glc")
+        xlabel = "log10( beta )", ylabel = "log10( stoi_err / ex_glc )")
     f(x) = log10(x)
     mat = zeros(length(sepouts), M)
     for (i, (beta, epout)) in enumerate(sepouts)
@@ -123,6 +127,10 @@ let
     end
     plot!(p, first.(sepouts), f.(mat); 
         label = "", color = :black, alpha = 0.1
+    )
+    plot!(p, first.(sepouts), f.(mean.(eachrow(mat))); 
+        label = "mean", color = :red, alpha = 0.8, 
+        lw = 5, ls = :dash
     )
     p
 end
