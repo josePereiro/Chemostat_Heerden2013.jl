@@ -49,6 +49,12 @@ ex_glc = fbaout.v[glc_idx]
 EPS = 1e-8
 
 ## -------------------------------------------------------------------
+# Meta
+const fileid = replace(basename(@__FILE__), ".jl" => "")
+mysavefig(p, fname::String) = (savefig(p, joinpath(iJR.MODEL_FIGURES_DIR, fname)); p)
+mysavefig(fname::String, p) = mysavefig(p, fname)
+
+## -------------------------------------------------------------------
 # abs(fba - ep) / ex_glc
 let
     p = plot(title = iJR.PROJ_IDER, 
@@ -66,7 +72,9 @@ let
     plot!(p, first.(sepouts), f.(mat[:, obj_idx] .+ EPS);
         label = "", color = :blue, ls = :dash, alpha = 0.8, lw = 3
     )
-    p
+
+    # saving
+    mysavefig(p, "$(fileid)_fba_ep_diff_vs_beta.png")
 end
 
 ## -------------------------------------------------------------------
@@ -110,16 +118,19 @@ let
         label = string("beta: ", round(Int, betas[end])), 
         kwargs...
     )
-    plot([p1, p2, p3]..., layout = grid(1, 3), size = [1200, 400], 
+    p = plot([p1, p2, p3]..., layout = grid(1, 3), size = [1200, 400], 
         margin = 5mm
     )
+
+    # saving
+    mysavefig(p, "$(fileid)_normalized_fba_ep_diff_vs_beta.png")
 end
 
 ## -------------------------------------------------------------------
 # stoi err
 let
     p = plot(title = iJR.PROJ_IDER, 
-        xlabel = "log10( beta )", ylabel = "log10( stoi_err / ex_glc )")
+        xlabel = "beta", ylabel = "log10( stoi_err / ex_glc )")
     f(x) = log10(x)
     mat = zeros(length(sepouts), M)
     for (i, (beta, epout)) in enumerate(sepouts)
@@ -132,5 +143,7 @@ let
         label = "mean", color = :red, alpha = 0.8, 
         lw = 5, ls = :dash
     )
-    p
+
+    # saving
+    mysavefig(p, "$(fileid)_normalized_stoi_err_vs_beta.png")
 end
