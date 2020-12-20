@@ -26,6 +26,7 @@ using Plots
 using Plots.Measures
 using Serialization
 using Statistics
+using Printf
 
 ## -------------------------------------------------------------------
 var_order = 49
@@ -51,8 +52,14 @@ EPS = 1e-8
 ## -------------------------------------------------------------------
 # Meta
 const fileid = replace(basename(@__FILE__), ".jl" => "")
+
+## -------------------------------------------------------------------
+# Tools
 mysavefig(p, fname::String) = (savefig(p, joinpath(iJR.MODEL_FIGURES_DIR, fname)); p)
 mysavefig(fname::String, p) = mysavefig(p, fname)
+sci(n) = @sprintf("%0.0e", n)
+setfontsize!(p, s) = plot!(p; xtickfontsize = s, titlefontsize = s,
+    ytickfontsize = s, xguidefontsize = s, yguidefontsize = s, legendfontsize = s)
 
 ## -------------------------------------------------------------------
 # abs(fba - ep) / ex_glc
@@ -78,7 +85,7 @@ let
 end
 
 ## -------------------------------------------------------------------
-# abs(fba - ep) / max_diff
+# normalized abs(fba - ep) / max_diff
 let
     p1 = plot(title = iJR.PROJ_IDER, 
         xlabel = "beta", 
@@ -106,21 +113,25 @@ let
         bins = 200,
         xlabel = "prob. density",
         ylabel = "abs( fba - ep ) / max_diff",
-        legend = :best, 
         orientation = :h, 
-        color = :black
+        color = :black,
     )
-    p2 = histogram(mat[begin, :];
+    p2 = histogram(mat[begin, :]; 
         label = string("beta: ", round(Int, betas[begin])), 
         kwargs...
     )
-    p3 = histogram(mat[end, :];  
-        label = string("beta: ", round(Int, betas[end])), 
+    p3 = histogram(mat[end, :];
+        label = string("beta: ", sci(betas[end])), 
         kwargs...
     )
-    p = plot([p1, p2, p3]..., layout = grid(1, 3), size = [1200, 400], 
-        margin = 5mm
+    setfontsize!(p2, 8)
+    setfontsize!(p3, 8)
+
+    kwargs = (;
+        layout = @layout([a [b ;c]]),
+        font = 10
     )
+    p = plot(p1, p2, p3; kwargs...)
 
     # saving
     mysavefig(p, "$(fileid)_normalized_fba_ep_diff_vs_beta.png")
