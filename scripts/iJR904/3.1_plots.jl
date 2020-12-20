@@ -20,6 +20,7 @@ const ChSU = Chemostat.SimulationUtils
 
 import SparseArrays
 using Plots
+using Statistics
 
 ## -------------------------------------------------------------------
 # save results
@@ -36,6 +37,12 @@ mysavefig(fname::String, p) = mysavefig(p, fname)
 
 ## -------------------------------------------------------------------
 # Collect data
+IGNORED = ["SA", "MA"]
+colors = Dict(
+    "GLC" => :red, "SA" => :yellow, "AcA" => :pink, 
+    "FA" => :orange, "MA" => :blue, "BiomassEcoli" => :black
+)
+P = Dict()
 D = Dict()
 objider = iJR.BIOMASS_IDER
 
@@ -73,6 +80,7 @@ let
         
         # mets
         for Hd_met in Hd.msd_mets
+            Hd_met in IGNORED && continue
             try
                 model_met = iJR.Hd_mets_map[Hd_met]
                 model_exch = iJR.exch_met_map[model_met]
@@ -138,6 +146,7 @@ let
         Hd_objval = Hd.val("D", exp)
         scatter!(p, [ep_objval], [Hd_objval], label = "")
     end
+    P["obj_val_ep_corr"] = deepcopy(p)
     mysavefig(p, "$(fileid)_obj_val_ep_corr.png")
 end
 
@@ -158,6 +167,7 @@ let
         scatter!(p, betas, bioms, label = "", color = :black, alpha = 0.2)
 
     end
+    P["obj_val_vs_beta"] = deepcopy(p)
     mysavefig(p, "$(fileid)_obj_val_vs_beta.png")
 end
 
@@ -173,27 +183,35 @@ let
         ep_p_norm = plot(;title = "$(iJR.PROJ_IDER) (EP normalized)", xlabel, ylabel)
         fba_p = plot(;title = "$(iJR.PROJ_IDER) (FBA)", xlabel, ylabel)
         fba_p_norm = plot(;title = "$(iJR.PROJ_IDER) (FBA normalized)", xlabel, ylabel)
-
+    
         for ider in [Hd.msd_mets; objider]
-            # ider in ["SA", "MA"] && continue
+
+            params = (;
+                label = "",
+                m = 8, 
+                alpha = 0.6, 
+                color = colors[ider]
+            )
 
             # flx
             flxkey = (dat_prefix, ider)
             if haskey(D[:Hd], flxkey)
             
                 # fba
-                scatter!(fba_p, D[:fba][flxkey], D[:Hd][flxkey]; label = "")
+                scatter!(fba_p, D[:fba][flxkey], D[:Hd][flxkey]; params...)
                 norm = maximum([abs.(D[:fba][flxkey]); abs.(D[:Hd][flxkey])])
-                scatter!(fba_p_norm, D[:fba][flxkey] ./ norm, D[:Hd][flxkey] ./ norm; label = "")
+                scatter!(fba_p_norm, D[:fba][flxkey] ./ norm, D[:Hd][flxkey] ./ norm; params...)
 
                 # ep
                 scatter!(ep_p, D[:ep][flxkey], D[:Hd][flxkey];
                     xerr = D[:eperr][flxkey], 
-                    label = "")
+                    params...
+                )
                 norm = maximum([abs.(D[:ep][flxkey]); abs.(D[:Hd][flxkey])])
                 scatter!(ep_p_norm, D[:ep][flxkey] ./ norm, D[:Hd][flxkey] ./ norm; 
                     xerr = D[:eperr][flxkey] ./ norm, 
-                    label = "")
+                    params...
+                )
             end
         end
         plot!(fba_p_norm, norm_lims, norm_lims; ls = :dash, color = :black, label = "")
@@ -202,7 +220,13 @@ let
         plot!(fba_p, lims, lims; ls = :dash, color = :black, label = "")
         plot!(ep_p, lims, lims; ls = :dash, color = :black, label = "")
         
+        P[string(dat_prefix, "_fba_norm_corr")] = deepcopy(fba_p_norm)
+        P[string(dat_prefix, "_ep_norm_corr")] = deepcopy(ep_p_norm)
+        P[string(dat_prefix, "_fba_corr")] = deepcopy(fba_p)
+        P[string(dat_prefix, "_ep_corr")] = deepcopy(ep_p)
+        
         p = plot([ep_p_norm, fba_p_norm, ep_p, fba_p]...; layout = 4, size = [800, 800])
+        P[string(dat_prefix, "_tot_corr")] = deepcopy(p)
         mysavefig(p, fname)
     end
 
@@ -234,20 +258,44 @@ end
 # Error histogram
 let
     flx_glc = D[:fba][(:flx, "GLC")]
-    # conc_glc = Hd.val("cGLC")
 
-    function _plot(k; d = 0.1)
-        p = plot(xlabel = "abs ( exp - model ) / exp ", ylabel = "prob density")
-        diff = abs.(D[k][(:flx, :all)] .- D[:Hd][(:flx, :all)]) 
-        norm = D[:Hd][(:flx, :all)] 
+    function _hist(datk, datt; d = 0.1)
+        p = plot(xlabel = "abs ( exp - model ) / abs( exp ) ", ylabel = "prob density")
+        diff = abs.(D[datk][(datt, :all)] .- D[:Hd][(datt, :all)]) 
+        norm = D[:Hd][(datt, :all)] 
         ndiff = diff ./ norm
         m, M = extrema(ndiff)
         histogram!(p, diff ./ norm; 
             bins = floor(Int, (M - m)/ d), 
-            normalize = :pdf, label = string(k), 
+            normalize = :pdf, label = string(datk), 
             color = :black, xlim = [0,3]
         )
+        μ = median(ndiff)
+        vline!(p,[μ]; label = "median", lw = 6, ls = :dash, color = :red)
+        P[string(datk, "_", datt, "_exp_norm_diff_hist")] = deepcopy(p)
     end
-    p = plot(_plot(:ep), _plot(:fba), layout = 2)
-    mysavefig(p, "$(fileid)_model_exp_err_hitograms.png")
+
+    for datt in [:flx, :conc]
+        pname = "total_exp_$(datt)_norm_diff_hist"
+        p = plot(_hist(:ep, datt), _hist(:fba, datt), layout = 2)
+        P[pname] = p
+        mysavefig(p, "$(fileid)_$(pname).png")
+    end
+    
+end
+
+## -------------------------------------------------------------------
+# corr plus error hitograms
+let
+    for datt in [:flx, :conc]
+        pname = "$(datt)_corr_diff_hist"
+        layout = @layout([a b; c d])
+        size = [600,600]
+        p = plot(P["$(datt)_ep_corr"], P["ep_$(datt)_exp_norm_diff_hist"],
+            P["$(datt)_fba_corr"], P["fba_$(datt)_exp_norm_diff_hist"]; 
+            layout, size
+        )
+        P[pname] = deepcopy(p)
+        p = mysavefig(p, "$(fileid)_$(pname).png")
+    end
 end
