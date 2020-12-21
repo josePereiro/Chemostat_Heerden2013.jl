@@ -71,7 +71,7 @@ let
     obj_ider = iJR.BIOMASS_IDER
     obj_idx = ChU.rxnindex(model, obj_ider)
     alpha = Inf
-    maxiter = Int(1e6)
+    maxiter = Int(1e5)
     minvar, maxvar = 1e-45, 1e45
     damp = 0.99
     fbaout = ChLP.fba(model, obj_idx)
