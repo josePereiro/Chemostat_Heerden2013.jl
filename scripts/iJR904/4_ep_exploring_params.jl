@@ -71,7 +71,7 @@ let
     obj_ider = iJR.BIOMASS_IDER
     obj_idx = ChU.rxnindex(model, obj_ider)
     alpha = Inf
-    maxiter = Int(1e6)
+    maxiter = Int(1e5)
     minvar, maxvar = 1e-45, 1e45
     damp = 0.99
     fbaout = ChLP.fba(model, obj_idx)
@@ -92,22 +92,24 @@ let
     write_lock = ReentrantLock()
 
     # @threads 
-    epsconvs = collect(10.0.^-(4:7))
-    @threads for epsconv in epsconvs
+    i_epsconvs = collect(enumerate(10.0.^-(4:7)))
+    Nepsconvs = length(i_epsconvs)
+    @threads for (epsconvi, epsconv) in i_epsconvs
 
         # cache
-        fname = savename("exploration_", (;epsconv), "jld")
+        fname = savename("exploration_", (;epsconv = string(epsconv)), "jld")
         fpath = joinpath(iJR.MODEL_PROCESSED_DATA_DIR, fname)
         if isfile(fpath)
             lock(write_lock) do
-                @info "Cache found SKIPING" threadid() epsconv fname
+                @info "Cache found SKIPING" threadid() epsconvi Nepsconvs epsconv fname
                 println()
             end
             continue
         end
 
         beta_range = [0.0; 10.0.^(-1:0.1:30)]
-        
+        Nbeta_range = length(beta_range)
+
         lmodel = deepcopy(model)
 
         # MaxEnt EP
@@ -117,11 +119,11 @@ let
         D = Dict()
         D["epouts"] = Dict()
         D["error"] = ""
-        for beta in beta_range
+        for (betai, beta) in enumerate(beta_range)
             beta_vec[obj_idx] = beta 
 
             lock(write_lock) do
-                @info "Doing" threadid() epsconv beta length(D["epouts"]) epoutT0.iter
+                @info "Doing" threadid() epsconvi Nepsconvs epsconv betai Nbeta_range beta length(D["epouts"]) epoutT0.iter
                 println()
             end
             
@@ -170,7 +172,7 @@ let
 
         lock(write_lock) do
             println()
-            @info "Finished" threadid() epsconv length(D["epouts"]) fname
+            @info "Finished" threadid() epsconvi Nepsconvs epsconv length(D["epouts"]) fname
             println() 
         end
 
