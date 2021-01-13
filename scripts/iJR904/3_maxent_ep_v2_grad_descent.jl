@@ -94,20 +94,55 @@ let
             r = [ChU.av(epout)[objidx]]
         end
 
+        # maxent
         expβ = ChSU.grad_desc(upfun; x0, x1, th, C, 
             target, maxiters = 1500, verbose = imverbose)
 
+        # fba
+        fbaout = let
+            lmodel = deepcopy(model)
+            ChU.ub!(lmodel, iJR.BIOMASS_IDER, Hd.val("D", exp))
+            ChLP.fba(lmodel, iJR.BIOMASS_IDER, iJR.COST_IDER)
+        end
+
+        # Storing
         D["model"] = ChU.compressed_model(model)
         D["exp_beta"] = first(expβ)
         D["exp_xi"] = expξ
         D["epouts"] = epouts
-        D["fbaout"] = ChLP.fba(model, iJR.BIOMASS_IDER, iJR.COST_IDER)
+        D["fbaout"] = fbaout
         D["epouts"] = epouts
         
         # release token
         lock(verbose_lock) do
             imverbose && (verbose_token = FREE; println())
         end
+    end
+end
+
+## -------------------------------------------------------------------
+# Fva
+let
+    ϵ = 0.95 # relax factor
+    @info "Doing FVA" ϵ
+    for (exp, D) in DATA
+        
+        model = D["model"]
+        fbaout = D["fbaout"]
+
+        biom_val = ChU.av(model, fbaout, iJR.BIOMASS_IDER)
+        cost_val = ChU.av(model, fbaout, iJR.COST_IDER)
+        biom_bounds = ChU.bounds(model, iJR.BIOMASS_IDER)
+        cost_bounds = ChU.bounds(model, iJR.COST_IDER)
+        
+        @info "Doing" exp biom_bounds cost_bounds
+        ChU.bounds!(model, iJR.BIOMASS_IDER, ϵ * biom_val, biom_val)
+        ChU.bounds!(model, iJR.COST_IDER, ϵ * cost_val, cost_val)
+        
+        D["fva"] = ChLP.fva(model)
+        
+        ChU.bounds!(model, iJR.BIOMASS_IDER, biom_bounds...)
+        ChU.bounds!(model, iJR.COST_IDER, cost_bounds...)
     end
 end
 
