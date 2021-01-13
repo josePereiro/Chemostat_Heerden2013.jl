@@ -8,20 +8,22 @@ import Base.Threads: @threads, threadid, SpinLock
 # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
 # package, then you must activate the package enviroment (see README)
 import Chemostat_Heerden2013
-const Hd  = Chemostat_Heerden2013.HeerdenData;
-const BD  = Chemostat_Heerden2013.BegData;
-const iJR = Chemostat_Heerden2013.iJR904
+const ChHd = Chemostat_Heerden2013
+const Hd  = ChHd.HeerdenData;
+const BD  = ChHd.BegData;
+const iJR = ChHd.iJR904
 
 ## -------------------------------------------------------------------
 # run add "https://github.com/josePereiro/Chemostat" in the 
 # julia Pkg REPL for installing the package
 import Chemostat
 import Chemostat.LP.MathProgBase
-const ChU = Chemostat.Utils
-const ChSS = Chemostat.SteadyState
-const ChLP = Chemostat.LP
-const ChEP = Chemostat.MaxEntEP
-const ChSU = Chemostat.SimulationUtils
+const Ch = Chemostat
+const ChU = Ch.Utils
+const ChSS = Ch.SteadyState
+const ChLP = Ch.LP
+const ChEP = Ch.MaxEntEP
+const ChSU = Ch.SimulationUtils
 ChU.set_cache_dir(iJR.CACHE_DIR)
 
 ## -------------------------------------------------------------------
@@ -60,8 +62,9 @@ let
         exp_growth = Hd.val("D", exp)
         expξ = Hd.val("xi", exp)
         intake_info = deepcopy(iJR.base_intake_info)
-        intake_info["EX_glc_LPAREN_e_RPAREN_"]["c"] = cGLC
+        intake_info[iJR.EX_GLC_IDER]["c"] = cGLC
         ChSS.apply_bound!(model, expξ, intake_info)
+        model = ChLP.fva_preprocess(model; check_obj = iJR.BIOMASS_IDER)
         
         # gradien descent
         epouts = Dict()
