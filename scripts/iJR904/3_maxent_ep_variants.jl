@@ -81,7 +81,7 @@ const EXPECTED = :EXPECTED
 # end;
 
 ## -------------------------------------------------------------------
-# EXPECTED
+# EXPECTED and HOMO
 let
     cGLCs = Hd.val("cGLC") |> enumerate |> collect
     @threads for (exp, cGLC) in cGLCs 
@@ -112,7 +112,8 @@ let
         
         # gradien descent
         epouts = Dict()
-        x0 = [0.0]
+        x0 = [0.0] 
+        @assert x0 == 0.0 # Must be zero for HOMO
         x1 = [10.0]
         C = [5e3]
         th = 1e-3
@@ -178,14 +179,14 @@ let
 
         lock(WLOCK) do
             # Storing
-            DAT = Dict()
-            DAT[:exp_beta] = expβ
-            DAT[:epouts] = epouts
-            DAT[:model] = model |> ChU.compressed_model
-            DAT[:fbaout] = fbaout
+            dat = Dict()
+            dat[:exp_beta] = expβ
+            dat[:epouts] = 
+            dat[:model] = model |> ChU.compressed_model
+            dat[:fbaout] = fbaout
 
             # caching
-            serialize(dfile, DAT)
+            serialize(dfile, dat)
             INDEX[EXPECTED, :DFILE, exp] = dfile
 
             ep_growth = ChU.av(epouts[expβ])[objidx]
@@ -242,17 +243,46 @@ let
         # storing
         lock(WLOCK) do
             # Storing
-            DAT = Dict()
-            DAT[:epout] = epout
-            DAT[:model] = model |> ChU.compressed_model
+            dat = Dict()
+            dat[:epout] = epout
+            dat[:model] = model |> ChU.compressed_model
 
             # caching
-            serialize(dfile, DAT)
+            serialize(dfile, dat)
             INDEX[BOUNDED, :DFILE, exp] = dfile
 
             @info("Finished ", exp, threadid())
             println()
         end
+    end
+end
+
+## -------------------------------------------------------------------
+# HOMO
+# It was computed in EXPECTED
+let
+    cGLCs = Hd.val("cGLC") |> enumerate |> collect
+    @threads for (exp, cGLC) in cGLCs 
+
+        lock(WLOCK) do
+            @info("Collecting $(HOMO)", 
+                exp, cGLC, threadid()
+            ); println()
+        end
+
+        exp_file = INDEX[EXPECTED, :DFILE, exp]
+        exp_dat = deserialize(exp_file)
+
+        homo_dat = Dict()
+        homo_dat[:epout] = exp_dat[:epouts][0.0] # At beta 0
+        homo_dat[:model] = exp_dat[:model]
+        homo_dat[:fbaout] = exp_dat[:fbaout]
+
+        # save homo
+        homo_file = dat_file(string("maxent_ep_boundle_", HOMO); exp)
+        serialize(homo_file, homo_dat)
+        INDEX[HOMO, :DFILE, exp] = homo_file
+            
     end
 end
 
