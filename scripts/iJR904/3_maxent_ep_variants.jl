@@ -181,7 +181,7 @@ let
             # Storing
             dat = Dict()
             dat[:exp_beta] = expβ
-            dat[:epouts] = 
+            dat[:epouts] = epouts
             dat[:model] = model |> ChU.compressed_model
             dat[:fbaout] = fbaout
 
