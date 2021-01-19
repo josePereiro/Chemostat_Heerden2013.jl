@@ -113,7 +113,7 @@ let
         # gradien descent
         epouts = Dict()
         x0 = [0.0] 
-        @assert x0 == 0.0 # Must be zero for HOMO
+        @assert x0 == [0.0] # Must be zero for HOMO
         x1 = [10.0]
         C = [5e3]
         th = 1e-3
