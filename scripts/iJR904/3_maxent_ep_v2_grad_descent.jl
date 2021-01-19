@@ -5,16 +5,17 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
     import SparseArrays
     import Base.Threads: @threads, threadid
 
-    ## -------------------------------------------------------------------
-    # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
-    # package, then you must activate the package enviroment (see README)
+    # -------------------------------------------------------------------
+    # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in 
+    # the Julia Pkg REPL to install the package, then you must activate 
+    # the package enviroment (see README)
     import Chemostat_Heerden2013
     const ChHd = Chemostat_Heerden2013
     const Hd  = ChHd.HeerdenData;
     const BD  = ChHd.BegData;
     const iJR = ChHd.iJR904
 
-    ## -------------------------------------------------------------------
+    # -------------------------------------------------------------------
     # run add "https://github.com/josePereiro/Chemostat" in the 
     # julia Pkg REPL for installing the package
     import Chemostat
@@ -44,10 +45,10 @@ let
         println()
 
         D = get!(DATA, exp, Dict())
-        haskey(D, "model") && continue # check caching
+        haskey(D, "model0") && continue # check caching
 
         # prepare model
-        model = ChU.MetNet(ChU.load_data(iJR.BASE_MODEL_FILE; verbose = true))
+        model = ChU.MetNet(ChU.load_data(iJR.BASE_MODELS_FILE; verbose = true))
         model = ChU.uncompressed_model(model)
         objidx = ChU.rxnindex(model, iJR.BIOMASS_IDER)
 
@@ -59,7 +60,7 @@ let
         model = ChLP.fva_preprocess(model; check_obj = iJR.BIOMASS_IDER, 
             verbose = true)
         
-        D["model"] = ChU.compressed_model(model)
+        D["model0"] = ChU.compressed_model(model)
         
         # caching
         ChU.save_data(DAT_FILE, DATA; verbose = false)

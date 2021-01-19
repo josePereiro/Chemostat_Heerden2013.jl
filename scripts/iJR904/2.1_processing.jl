@@ -426,7 +426,7 @@ p = Plots.plot(ps..., size = [800,1600],
 # p
 
 # ## rand reaction
-# model = deserialize(iJR.BASE_MODEL_FILE)
+# model = deserialize(iJR.BASE_MODELS_FILE)
 # ider = rand(model.rxns)
 # p = Plots.plot(xlabel = "flx", ylabel = "pdf", title = ider)
 # for (exp, bundle) in bundles |> sort

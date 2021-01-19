@@ -22,7 +22,7 @@ const ChSU = Chemostat.SimulationUtils
 # Simulation
 DATA = Dict()
 let
-    model = ChU.MetNet(ChU.load_data(ECC.BASE_MODEL_FILE))
+    model = ChU.MetNet(ChU.load_data(ECC.BASE_MODELS_FILE))
     objidx = ChU.rxnindex(model, ECC.BIOMASS_IDER)
     M, N = size(model)
 

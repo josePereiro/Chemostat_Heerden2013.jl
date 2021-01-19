@@ -51,7 +51,7 @@ end
 ## ----------------------------------------------------------------------
 function prepare_model(exp; verbose = true)
     # prepare model
-    model = ChU.MetNet(ChU.load_data(iJR.BASE_MODEL_FILE; verbose))
+    model = ChU.MetNet(ChU.load_data(iJR.BASE_MODELS_FILE; verbose))
     model = ChU.uncompressed_model(model)
 
     exp_growth = Hd.val("D", exp)

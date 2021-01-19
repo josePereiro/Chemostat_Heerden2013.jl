@@ -115,4 +115,4 @@ ChU.summary(model)
 ## -------------------------------------------------------------------
 # Saving model
 dict_model = model |> ChU.struct_to_dict
-ChU.save_data(ECC.BASE_MODEL_FILE, dict_model);
+ChU.save_data(ECC.BASE_MODELS_FILE, dict_model);

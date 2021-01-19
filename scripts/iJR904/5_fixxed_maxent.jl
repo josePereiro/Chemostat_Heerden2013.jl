@@ -35,7 +35,7 @@ filesize(DAT_FILE)
 
 ## ----------------------------------------------------------------------------
 let
-    model = ChU.MetNet(ChU.load_data(iJR.BASE_MODEL_FILE))
+    model = ChU.MetNet(ChU.load_data(iJR.BASE_MODELS_FILE))
     model = ChU.uncompressed_model(model)
     objidx = ChU.rxnindex(model, iJR.BIOMASS_IDER)
     M, N = size(model)

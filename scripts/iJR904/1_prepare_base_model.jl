@@ -1,27 +1,29 @@
 import DrWatson: quickactivate
 quickactivate(@__DIR__, "Chemostat_Heerden2013")
 
-import CSV
-import MAT
-using DataFrames
-using Serialization
+@time begin
+    import CSV
+    import MAT
+    using DataFrames
+    using Serialization
 
-## -------------------------------------------------------------------
-# run add "https://github.com/josePereiro/Chemostat" in the 
-# julia Pkg REPL for installing the package
-import Chemostat
-const ChU = Chemostat.Utils
-const ChSS = Chemostat.SteadyState
-const ChLP = Chemostat.LP
+    # -------------------------------------------------------------------
+    # run add "https://github.com/josePereiro/Chemostat" in the 
+    # julia Pkg REPL for installing the package
+    import Chemostat
+    const ChU = Chemostat.Utils
+    const ChSS = Chemostat.SteadyState
+    const ChLP = Chemostat.LP
 
-## -------------------------------------------------------------------
-# Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
-# package, then you must activate the package enviroment (see README)
-import Chemostat_Heerden2013: HeerdenData, BegData, iJR904
-const Hd  = HeerdenData;
-const Bd  = BegData
-const iJR = iJR904
-
+    # -------------------------------------------------------------------
+    # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the
+    # package, then you must activate the package enviroment (see README)
+    import Chemostat_Heerden2013
+    const ChH = Chemostat_Heerden2013
+    const Hd  = ChH.HeerdenData;
+    const Bd  = ChH.BegData
+    const iJR = ChH.iJR904
+end
 
 ## -------------------------------------------------------------------
 # Tools
@@ -122,7 +124,6 @@ ChU.tagprintln_inmw("SPLITING REVS",
 )
 
 model = ChU.split_revs(model;
-
     get_fwd_ider = fwd_ider,
     get_bkwd_ider = bkwd_ider,
 );
@@ -155,20 +156,20 @@ ChU.tagprintln_inmw("SETTING EXCHANGES")
 # base_intake_info (The minimum medium) will be opened.
 # The base model will be constraint as in a cultivation with xi = 1.0
 # see Cossios paper (see README)
-ξ = 1.0 
-# println("Minimum medium: ", iJR.base_intake_info)
-foreach(exchs) do idx
-    ChU.ub!(model, idx, iJR.MAX_ABS_BOUND) # Opening all outakes
-    ChU.lb!(model, idx, 0.0) # Closing all intakes
+let ξ = 1.0 
+    # println("Minimum medium: ", iJR.base_intake_info)
+    foreach(exchs) do idx
+        ChU.ub!(model, idx, iJR.MAX_ABS_BOUND) # Opening all outakes
+        ChU.lb!(model, idx, 0.0) # Closing all intakes
+    end
+
+    # see Cossios paper (see README) for details in the Chemostat bound constraint
+    ChSS.apply_bound!(model, ξ, iJR.base_intake_info);
+    # tot_cost is the exchange that controls the bounds of the 
+    # enzimatic cost contraint, we bound it to [0, 1.0]
+    ChU.lb!(model, cost_exch_id, 0.0);
+    ChU.ub!(model, cost_exch_id, 1.0);
 end
-
-# see Cossios paper (see README) for details in the Chemostat bound constraint
-ChSS.apply_bound!(model, ξ, iJR.base_intake_info);
-
-# tot_cost is the exchange that controls the bounds of the 
-# enzimatic cost contraint, we bound it to [0, 1.0]
-ChU.lb!(model, cost_exch_id, 0.0);
-ChU.ub!(model, cost_exch_id, 1.0);
 
 ## -------------------------------------------------------------------
 # Exch_met_map
@@ -186,20 +187,51 @@ end;
 ChU.save_data(iJR.EXCH_MET_MAP_FILE, exch_met_map)
 
 ## -------------------------------------------------------------------
-partial_test(model)
-
 # FVA PREPROCESSING
-model = ChLP.fva_preprocess(model, 
-    batchlen = 50,
-    check_obj = iJR.BIOMASS_IDER,
-    verbose = true
-)
-partial_test(model)
+compressed(model) = model |> ChU.struct_to_dict |> ChU.compressed_copy
+const BASE_MODELS = isfile(iJR.BASE_MODELS_FILE) ? 
+    ChU.load_data(iJR.BASE_MODELS_FILE) : 
+    Dict("base_model" => compressed(model))
+cGLCs = Hd.val("cGLC")
+for (exp, cGLC) in enumerate(cGLCs)
 
-## -------------------------------------------------------------------
-ChU.summary(model)
+    D = get!(BASE_MODELS, "fva_models", Dict())
+    ChU.tagprintln_inmw("DOING FVA", 
+        "\nexp:             ", exp,
+        "\ncGLC:            ", cGLC,
+        "\ncProgress:       ", length(D),
+        "\n"
+    )
+    haskey(D, exp) && continue # cached
 
-## -------------------------------------------------------------------
-# Saving model
-dict_model = model |> ChU.struct_to_dict |> ChU.compressed_copy
-ChU.save_data(iJR.BASE_MODEL_FILE, dict_model);
+    ## -------------------------------------------------------------------
+    # prepare model
+    model0 = deepcopy(model)
+    intake_info = deepcopy(iJR.base_intake_info)
+    # The only difference between experiments is the feed medium 
+    # concentration.
+    ξ = Hd.val("xi", exp)
+    intake_info[iJR.EX_GLC_IDER]["c"] = cGLC
+    ChSS.apply_bound!(model0, ξ, intake_info; 
+        emptyfirst = true, ignore_miss = true
+    )
+        
+    ## -------------------------------------------------------------------
+    # fva
+    partial_test(model0)
+    fva_model = ChLP.fva_preprocess(model0, 
+        batchlen = 50,
+        check_obj = iJR.BIOMASS_IDER,
+        verbose = true
+    )
+    partial_test(fva_model)
+    ChU.summary(fva_model)
+
+    # storing
+    D[exp] = compressed(fva_model)
+    
+    ## -------------------------------------------------------------------
+    # caching
+    ChU.save_data(iJR.BASE_MODELS_FILE, BASE_MODELS);
+    GC.gc()
+end
