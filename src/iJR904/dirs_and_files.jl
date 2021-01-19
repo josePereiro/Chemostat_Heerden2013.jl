@@ -18,4 +18,5 @@ end
 const MODEL_RAW_MAT_FILE = joinpath(MODEL_PROCESSED_DATA_DIR, "iJR904.mat")
 const BASE_MODELS_FILE = joinpath(MODEL_PROCESSED_DATA_DIR, "base_models.bson")
 const EXCH_MET_MAP_FILE = joinpath(MODEL_PROCESSED_DATA_DIR, "exch_met_map.bson")
-const MAXENT_FBA_EB_BOUNDLES_FILE = joinpath(MODEL_PROCESSED_DATA_DIR, "maxent_fba_ep_bundles.bson")
+const MAXENT_B0SEEDS_FILE = joinpath(MODEL_PROCESSED_DATA_DIR, "maxent_b0seed_bundles.bson")
+const MAXENT_VARIANTS_INDEX_FILE = joinpath(MODEL_PROCESSED_DATA_DIR, "maxent_variants_index.bson")

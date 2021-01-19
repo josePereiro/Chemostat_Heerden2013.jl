@@ -119,7 +119,7 @@ pmap(enumerate(cGLCs)) do (exp, cGLC) # This is parallizable
     )
 
     epmodel_kwargs = Dict(:alpha => Inf)
-    epconv_kwargs = Dict(:epsconv => 1e-4, :maxiter => 10000)
+    epconv_kwargs = Dict(:epsconv => 1e-4, :maxiter => 10000, :damp => 0.985)
 
     sim_id = string("exp: ", exp, "_global_id", SIM_GLOBAL_ID)
 
@@ -160,7 +160,7 @@ end
 
 ## ----------------------------------------------------------------------------
 ## SAVING
-ChU.save_data(iJR.MAXENT_FBA_EB_BOUNDLES_FILE, BUNDLES)
+ChU.save_data(iJR.MAXENT_B0SEEDS_FILE, BUNDLES)
 
 ## ----------------------------------------------------------------------------
 ## CLEAR CACHE (WARNING)
