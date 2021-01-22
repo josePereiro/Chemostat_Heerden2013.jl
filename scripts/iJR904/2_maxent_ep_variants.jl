@@ -33,12 +33,9 @@ end
 
 ## -------------------------------------------------------------------
 # globals
-WLOCK = ReentrantLock()
-SIM_GLOBAL_ID = "iJR904_MAXENT_VARIANTS"
-
-# ChU.save_cache(res_id, (exp, dat); headline = "CATCHING RESULTS\n")
-## -------------------------------------------------------------------
-# Prepare fva models
+const WLOCK = ReentrantLock()
+const SIM_GLOBAL_ID = "iJR904_MAXENT_VARIANTS"
+const DAT_FILE_PREFFIX =  "maxent_ep_boundle_"
 
 const INDEX = ChU.DictTree()
 function dat_file(name; kwargs...)
@@ -52,7 +49,6 @@ function base_model(exp)
     model_dict = BASE_MODELS["fva_models"][exp]
     ChU.MetNet(;model_dict...) |> ChU.uncompressed_model
 end
-# b0seed(exp) = ChU.load_data(iJR.MAXENT_B0SEEDS_FILE; verbose = false)[exp][:epoutb0]
 
 ## -------------------------------------------------------------------
 const HOMO = :HOMO
@@ -87,12 +83,12 @@ let
     @threads for (exp, cGLC) in cGLCs 
 
         # handle cache
-        dfile = dat_file(string("maxent_ep_boundle_", EXPECTED); exp)
-        if isfile(dfile)
+        datfile = dat_file(string(DAT_FILE_PREFFIX, EXPECTED); exp)
+        if isfile(datfile)
             lock(WLOCK) do
-                INDEX[EXPECTED, :DFILE, exp] = dfile
+                INDEX[EXPECTED, :DFILE, exp] = datfile
                 @info("Cached loaded (skipping)",
-                    exp, cGLC,dfile, threadid()
+                    exp, cGLC,datfile, threadid()
                 )
                 println()
             end
@@ -170,24 +166,16 @@ let
         expβ = ChSU.grad_desc(upfun; x0, x1, th, C, 
             target, maxiters = 2000, verbose = false) |> first
 
-        # fba
-        fbaout = let
-            lmodel = deepcopy(model)
-            ChU.ub!(lmodel, iJR.BIOMASS_IDER, Hd.val("D", exp))
-            ChLP.fba(lmodel, iJR.BIOMASS_IDER, iJR.COST_IDER)
-        end
-
         lock(WLOCK) do
             # Storing
             dat = Dict()
             dat[:exp_beta] = expβ
             dat[:epouts] = epouts
             dat[:model] = model |> ChU.compressed_model
-            dat[:fbaout] = fbaout
 
             # caching
-            serialize(dfile, dat)
-            INDEX[EXPECTED, :DFILE, exp] = dfile
+            serialize(datfile, dat)
+            INDEX[EXPECTED, :DFILE, exp] = datfile
 
             ep_growth = ChU.av(epouts[expβ])[objidx]
             diff = abs.(exp_growth - ep_growth)
@@ -210,12 +198,12 @@ let
     @threads for (exp, cGLC) in cGLCs 
 
         # handle cache
-        dfile = dat_file(string("maxent_ep_boundle_", BOUNDED); exp)
-        if isfile(dfile)
+        datfile = dat_file(string(DAT_FILE_PREFFIX, BOUNDED); exp)
+        if isfile(datfile)
             lock(WLOCK) do
-                INDEX[BOUNDED, :DFILE, exp] = dfile
+                INDEX[BOUNDED, :DFILE, exp] = datfile
                 @info("Cached loaded (skipping)",
-                    exp, cGLC, dfile, threadid()
+                    exp, cGLC, datfile, threadid()
                 ); println()
             end
             continue
@@ -228,6 +216,11 @@ let
         exp_growth = Hd.val("D", exp)
         ChU.ub!(model, iJR.BIOMASS_IDER, exp_growth * (1.0 + biomass_f))
         ChU.lb!(model, iJR.BIOMASS_IDER, exp_growth * (1.0 - biomass_f))
+        model = ChLP.fva_preprocess(model, 
+            batchlen = 50,
+            check_obj = iJR.BIOMASS_IDER,
+            verbose = true
+        )
 
         lock(WLOCK) do
             @info("Doing $(BOUNDED)", 
@@ -244,12 +237,13 @@ let
         lock(WLOCK) do
             # Storing
             dat = Dict()
-            dat[:epout] = epout
+            dat[:exp_beta] = 0.0
+            dat[:epouts] = Dict(0.0 => epout)
             dat[:model] = model |> ChU.compressed_model
 
             # caching
-            serialize(dfile, dat)
-            INDEX[BOUNDED, :DFILE, exp] = dfile
+            serialize(datfile, dat)
+            INDEX[BOUNDED, :DFILE, exp] = datfile
 
             @info("Finished ", exp, threadid())
             println()
@@ -274,16 +268,26 @@ let
         exp_dat = deserialize(exp_file)
 
         homo_dat = Dict()
-        homo_dat[:epout] = exp_dat[:epouts][0.0] # At beta 0
+        homo_dat[:exp_beta] = 0.0
+        epout = exp_dat[:epouts][0.0]  # At beta 0
+        homo_dat[:epouts] = Dict(0.0 => epout)
         homo_dat[:model] = exp_dat[:model]
-        homo_dat[:fbaout] = exp_dat[:fbaout]
 
         # save homo
-        homo_file = dat_file(string("maxent_ep_boundle_", HOMO); exp)
+        homo_file = dat_file(string(DAT_FILE_PREFFIX, HOMO); exp)
         serialize(homo_file, homo_dat)
         INDEX[HOMO, :DFILE, exp] = homo_file
             
     end
+end
+
+## -------------------------------------------------------------------
+# FBA
+let
+    # fba
+    # lmodel = deepcopy(model)
+    # ChU.ub!(lmodel, iJR.BIOMASS_IDER, Hd.val("D", exp))
+    # ChLP.fba(lmodel, iJR.BIOMASS_IDER, iJR.COST_IDER)
 end
 
 ## -------------------------------------------------------------------

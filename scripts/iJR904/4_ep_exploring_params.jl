@@ -41,7 +41,7 @@ function partial_test(model, title  = "PARTIAL TEST")
     fbaout = ChLP.fba(model, iders...);
     ChU.tagprintln_inmw(title, 
         "\nsize:             ", size(model),
-        "\nobj_ider:         " , iJR.BIOMASS_IDER,
+        "\nobj_ider:         ", iJR.BIOMASS_IDER,
         "\nfba obj_val:      ", ChU.av(model, fbaout, iJR.BIOMASS_IDER),
         "\ncost_ider:        ", withcost ? iJR.COST_IDER : "not found",
         "\nfba cost_val:     ", withcost ? ChU.av(model, fbaout, iJR.COST_IDER) : "not found",
@@ -123,8 +123,13 @@ let
             beta_vec[obj_idx] = beta 
 
             lock(write_lock) do
-                @info "Doing" threadid() epsconvi Nepsconvs epsconv betai Nbeta_range beta length(D["epouts"]) epoutT0.iter
-                println()
+                @info("Doing", 
+                    threadid(), epsconvi, 
+                    Nepsconvs, epsconv, betai, 
+                    Nbeta_range, beta,
+                    length(D["epouts"]), 
+                    epoutT0.iter
+                ); println()
             end
             
             try
@@ -139,17 +144,18 @@ let
                 )
                 if epoutT0.status != ChEP.CONVERGED_STATUS 
                     lock(write_lock) do
-                        @info string("At threadid() = ", threadid()) epoutT0.status
-                        println()
+                        @info(string("At threadid() = ", threadid()), 
+                            epoutT0.status
+                        ); println()
                         D["error"] = "status = $(epoutT0.status)"
                     end
                     break
                 end
             catch err
                 lock(write_lock) do
-                    @info string("At threadid() = ", threadid())
+                    @info(string("At threadid() = ", threadid()))
                     msg = err_str(err; max_len = 500)
-                    @error msg
+                    @error(msg)
                     D["error"] = msg
                     println()
                 end
@@ -157,7 +163,7 @@ let
             end
 
             D["epouts"][beta] = epoutT0
-        end
+        end # for (betai, beta)
 
         # store and save
         D["beta_range"] = collect(keys(D["epouts"])) |> unique |> sort
@@ -172,8 +178,12 @@ let
 
         lock(write_lock) do
             println()
-            @info "Finished" threadid() epsconvi Nepsconvs epsconv length(D["epouts"]) fname
-            println() 
+            @info("Finished", 
+                threadid(), epsconvi, 
+                Nepsconvs, epsconv,
+                length(D["epouts"]), 
+                fname
+            ); println() 
         end
 
     end # @threads for var_order in var_orders
