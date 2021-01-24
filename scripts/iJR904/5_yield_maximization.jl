@@ -48,22 +48,21 @@ myminmax(a::Vector) = (minimum(a), maximum(a))
 CONC_IDERS = String["GLC", "AcA", "FA"]
 FLX_IDERS = [CONC_IDERS; "D"]
 
-FLX_IDERS_MAP = Dict(
-    "uGLC" => "EX_glc_LPAREN_e_RPAREN__REV",
-    "uAcA" => "EX_ac_LPAREN_e_RPAREN_",
-    "uFA" => "EX_for_LPAREN_e_RPAREN_",
-    "D" => "BiomassEcoli"
+SENSE = Dict(
+    "EX_glc_LPAREN_e_RPAREN__REV" => -1,
+    "EX_ac_LPAREN_e_RPAREN_" => 1,
+    "EX_for_LPAREN_e_RPAREN_" => 1,
+    "BiomassEcoli" => 1,
 )
 
 exp_colors = let
-    cGLCs = Hd.val("cGLC")
-    colors = Plots.distinguishable_colors(length(cGLCs))
-    Dict(exp => color for (exp, color) in zip(eachindex(cGLCs), colors))
+    colors = Plots.distinguishable_colors(length(Hd.EXPS))
+    Dict(exp => color for (exp, color) in zip(Hd.EXPS, colors))
 end
 
 ider_colors = let
     colors = Plots.distinguishable_colors(length(FLX_IDERS))
-    Dict(met => color for (met, color) in zip(FLX_IDERS, colors))
+    Dict(id => color for (id, color) in zip(FLX_IDERS, colors))
 end
 
 method_colors = Dict(
@@ -173,7 +172,7 @@ let
     for exp in Hd.EXPS
         !haskey(DAT, exp) && continue
         status, yflxs, model_yield, d, model = DAT[exp]
-        exglc_idx = ChU.rxnindex(model, FLX_IDERS_MAP["uGLC"])
+        exglc_idx = ChU.rxnindex(model, "EX_glc_LPAREN_e_RPAREN__REV")
         biomass_idx = ChU.rxnindex(model, iJR.BIOMASS_IDER)
         
         exp_yield = abs(Hd.val("D", exp) / Hd.val("uGLC", exp))
@@ -210,28 +209,72 @@ let
     pname = "yield_vs_stuff"
     mysavefig(ps, pname)
 end
+
+## -----------------------------------------------------------------------------------------------
+let
+    for exp in Hd.EXPS
+        !haskey(DAT, exp) && continue
+        status, yflxs, yield, d, model = DAT[exp]
+        # @assert all(isapprox.(model.S * yflxs, model.b; atol = 1-3))
+        @show maximum(abs.(model.S * yflxs .- model.b))
+
+        break
+    end
+end
 ## -----------------------------------------------------------------------------------------------
 # correlations
+FLX_IDERS_MAP = Dict(
+    "GLC" => "EX_glc_LPAREN_e_RPAREN__REV",
+    "AcA" => "EX_ac_LPAREN_e_RPAREN_",
+    "FA" => "EX_for_LPAREN_e_RPAREN_",
+    "D" => "BiomassEcoli"
+)
+
 let
 
-    p = plot(title = "tot corrs"; xlabel = "exp", ylabel = "model")
+    p = plot(title = "tot corrs"; xlabel = "exp flx", ylabel = "model flx")
 
     for (Hd_ider, model_ider) in FLX_IDERS_MAP
+        Hd_fun = Hd_ider == "D" ? Hd.val : Hd.uval
         margin, m, M = -Inf, Inf, -Inf
         for exp in Hd.EXPS
             !haskey(DAT, exp) && continue
             status, yflxs, yield, d, model = DAT[exp]
             model_idx = ChU.rxnindex(model, model_ider)
             
-            sense = Hd_ider == "D" ? 1 : -1
-            Hd_flx = sense * Hd.val(Hd_ider, exp)
-            ymax_flx = yflxs[model_idx]
-            scatter!(p, [Hd_flx], [ymax_flx]; 
-                color = :blue, alpha = 0.6, label = ""
+            color = ider_colors[Hd_ider]
+            Hd_flx = Hd_fun(Hd_ider, exp)
+            ymax_flx = SENSE[model_ider] * yflxs[model_idx]
+            scatter!(p, [Hd_flx], [ymax_flx]; ms = 8,
+                color, alpha = 0.6, label = ""
             )
         end
     end
 
     pname = "tot_corr"
     mysavefig(p, pname)
+end
+
+## -------------------------------------------------------------------
+# leyends
+# TODO fix this...
+let
+    for (title, colors) in [
+            ("exp", exp_colors), 
+            ("iders", ider_colors),
+            ("method", method_colors)
+        ]
+    p = plot(; framestyle = :none)
+        scolors = sort(collect(colors); by = (p) -> string(first(p)))
+        for (id, color) in scolors
+            scatter!(p, [0], [0];
+                thickness_scaling = 1,
+                color, ms = 8, label = string(id),
+                legendfontsize=10, 
+                # size = [300, 900],
+                # legend = :left
+            )
+        end
+        mysavefig(p, "$(title)_color_legend")
+    end
 end
