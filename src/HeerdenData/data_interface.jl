@@ -15,6 +15,12 @@ val(id, indx)::Vector{Float64} = val(id)[indx]
 name(id)::String = string(CONT_CUL_DATA[1, Symbol(id)])
 unit(id)::String = string(CONT_CUL_DATA[2, Symbol(id)])
 
+
+for preffix in ["u", "s", "c"]
+    fname = Symbol("$(preffix)val")
+    @eval $fname(id, args...) = val(string($preffix, id), args...)
+end
+
 # Load data
 function _load_cont_cul_data()
 

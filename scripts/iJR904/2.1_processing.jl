@@ -105,7 +105,6 @@ DAT = ChU.DictTree()
 let 
     objider = iJR.BIOMASS_IDER
 
-    cGLCs = Hd.val("cGLC") |> enumerate 
     for method in [HOMO, EXPECTED, BOUNDED]
         for exp in Hd.EXPS
             
@@ -361,12 +360,6 @@ end
 # end
 
 ## -------------------------------------------------------------------
-let
-    datfile = INDEX[EXPECTED, :DFILE, 10]
-    dat = deserialize(datfile)
-    dat[:epouts][dat[:exp_beta]]
-end
-## -------------------------------------------------------------------
 # marginal distributions
 let 
     objider = iJR.BIOMASS_IDER
@@ -402,7 +395,6 @@ let
                 exp_beta = dat[:exp_beta]
                 epouts = dat[:epouts]
                 epout = epouts[exp_beta]
-                exp_xi = Hd.val("xi", exp)
                 ep_av = ChU.av(model, epout, model_ider)
                 ep_va = sqrt(ChU.va(model, epout, model_ider))
                 # fbaout = dat[:fbaout]
