@@ -56,27 +56,6 @@ const BOUNDED = :BOUNDED
 const EXPECTED = :EXPECTED
 
 ## -------------------------------------------------------------------
-# let
-#     cGLCs = Hd.val("cGLC")[3:3] |> enumerate |> collect
-#     @threads for (exp, cGLC) in cGLCs 
-#         epout = b0seed(exp)
-#         @info "seed " exp epout.status mean(epout.μ) mean(epout.σ) mean(epout.av) mean(epout.va)
-#     end
-# end
-## -------------------------------------------------------------------
-# @time let
-#     exp = 3
-#     model = base_model(exp)
-#     damp = 0.985
-#     epsconv = 1e-4
-#     maxiter = 3000
-#     alpha = Inf
-#     solution = ChEP.maxent_ep(model; damp, alpha, epsconv, maxiter)
-#     epout = ChEP.maxent_ep(model; damp, alpha, solution, epsconv, maxiter)
-#     @info "seed " exp epout.status mean(epout.μ) mean(epout.σ) mean(epout.av) mean(epout.va)
-# end;
-
-## -------------------------------------------------------------------
 # EXPECTED and HOMO
 let
     cGLCs = Hd.val("cGLC") |> enumerate |> collect
@@ -279,15 +258,6 @@ let
         INDEX[HOMO, :DFILE, exp] = homo_file
             
     end
-end
-
-## -------------------------------------------------------------------
-# FBA
-let
-    # fba
-    # lmodel = deepcopy(model)
-    # ChU.ub!(lmodel, iJR.BIOMASS_IDER, Hd.val("D", exp))
-    # ChLP.fba(lmodel, iJR.BIOMASS_IDER, iJR.COST_IDER)
 end
 
 ## -------------------------------------------------------------------

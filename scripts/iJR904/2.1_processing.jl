@@ -56,49 +56,27 @@ function mysavefig(p, pname; params...)
     @info "Plotting" fname
 end
 myminmax(a::Vector) = (minimum(a), maximum(a))
-CONC_IDERS = String["GLC", "AcA", "FA"]
-FLX_IDERS = [CONC_IDERS; iJR.BIOMASS_IDER]
+CONC_IDERS = ["GLC", "SA", "AcA", "FA"]
+FLX_IDERS = ["GLC", "SA", "AcA", "FA"]
+
+EXPS = Hd.EXPS # experiments that have both concentration and flx data
 
 exp_colors = let
-    cGLCs = Hd.val("cGLC")
-    colors = Plots.distinguishable_colors(length(cGLCs))
-    Dict(exp => color for (exp, color) in zip(eachindex(cGLCs), colors))
+    colors = Plots.distinguishable_colors(length(EXPS))
+    Dict(exp => color for (exp, color) in zip(EXPS, colors))
 end
 
-ider_colors = let
-    colors = Plots.distinguishable_colors(length(FLX_IDERS))
-    Dict(met => color for (met, color) in zip(FLX_IDERS, colors))
-end
+ider_colors = Dict(
+    "GLC" => :red, "SA" => :yellow,
+    "AcA" => :orange, "FA" => :blue,
+    "D" => :black,
+)
 
 method_colors = Dict(
     HOMO => :red,
     BOUNDED => :orange,
     EXPECTED => :blue,
 )
-
-## -------------------------------------------------------------------
-# leyends
-# TODO fix this...
-let
-    for (title, colors) in [
-            ("exp", exp_colors), 
-            ("iders", ider_colors),
-            ("method", method_colors)
-        ]
-    p = plot(; framestyle = :none)
-        scolors = sort(collect(colors); by = (p) -> string(first(p)))
-        for (id, color) in scolors
-            scatter!(p, [0], [0];
-                thickness_scaling = 1,
-                color, ms = 8, label = string(id),
-                legendfontsize=10, 
-                # size = [300, 900],
-                # legend = :left
-            )
-        end
-        mysavefig(p, "$(title)_color_legend")
-    end
-end
 
 ## -------------------------------------------------------------------
 DAT = ChU.DictTree()
@@ -122,13 +100,11 @@ let
             # fbaout = dat[:fbaout]
 
             # Biomass
-            # fba_biom = ChU.av(model, fbaout, objidx)
             ep_biom = ChU.av(model, epout, objidx)
             ep_std = sqrt(ChU.va(model, epout, objidx))
             Hd_biom = Hd.val("D", exp)
             
             # store
-            # DAT[:fba  , :flx, objider, exp] = fba_biom
             DAT[method, :ep   , :flx, objider, exp] = ep_biom
             DAT[method, :eperr, :flx, objider, exp] = ep_std
             DAT[method, :Hd   , :flx, objider, exp] = Hd_biom
@@ -136,47 +112,43 @@ let
             DAT[method, :fva  , :flx, objider, exp] = ChU.bounds(model, objider)
             
             # mets
-            for Hd_met in Hd.MSD_METS
+            for Hd_met in FLX_IDERS
 
-                try
                     model_met = iJR.Hd_mets_map[Hd_met]
                     model_exch = iJR.exch_met_map[model_met]
                     model_exchi = ChU.rxnindex(model, model_exch)
 
                     # fuxes
-                    # fba_av = ChU.av(model, fbaout, model_exchi)
                     ep_av = ChU.av(model, epout, model_exchi)
                     ep_std = sqrt(ChU.va(model, epout, model_exchi))
                     Hd_flx = Hd.val("u$Hd_met", exp)
                     
-                    # conc (s = c + u*xi)
-                    c = Hd.val("c$Hd_met", exp, 0.0)
-                    # fba_conc = max(c + fba_av * exp_xi, 0.0)
-                    ep_conc = max(c + ep_av * exp_xi, 0.0)
-                    Hd_conc = Hd.val("s$Hd_met", exp)
-                    
                     DAT[method, :Hd, :flx, Hd_met, exp] = Hd_flx
                     DAT[:Hd, :flx, Hd_met, exp] = Hd_flx
-                    DAT[method, :Hd, :conc, Hd_met, exp] = Hd_conc
-                    DAT[:Hd, :conc, Hd_met, exp] = Hd_conc
                     DAT[method, :ep, :flx, Hd_met, exp] = ep_av
-                    DAT[method, :ep, :conc, Hd_met, exp] = ep_conc
                     DAT[method, :eperr, :flx, Hd_met, exp] = ep_std
-                    DAT[method, :eperr, :conc, Hd_met, exp] = ep_std * exp_xi
+                    
                     DAT[method, :fva , :flx, Hd_met, exp] = ChU.bounds(model, model_exch)
 
-                catch err
-                    @warn string(Hd_met, " fails") err
-                end
             end
-        end
 
-        # DAT[:mflx], DAT[:Mflx] = myminmax(DAT[[:ep, :fba, :Hd], :flx, FLX_IDERS, Hd.EXPS])
-        DAT[method, :mflx], DAT[method, :Mflx] = 
-            myminmax(DAT[method, [:ep, :Hd], :flx, FLX_IDERS, Hd.EXPS])
-        # DAT[:mconc], DAT[:Mconc] = myminmax(DAT[[:ep, :fba, :Hd], :conc, CONC_IDERS, Hd.EXPS])
-        DAT[method, :mconc], DAT[method, :Mconc] = 
-            myminmax(DAT[method, [:ep, :Hd], :conc, CONC_IDERS, Hd.EXPS])
+            for Hd_met in CONC_IDERS
+
+                ep_av = DAT[method, :ep, :flx, Hd_met, exp]
+                ep_std = DAT[method, :eperr, :flx, Hd_met, exp] 
+
+                # conc (s = c + u*xi)
+                c = Hd.val("c$Hd_met", exp, 0.0)
+                ep_conc = max(c + ep_av * exp_xi, 0.0)
+                Hd_conc = Hd.val("s$Hd_met", exp)
+                
+                DAT[method, :Hd, :conc, Hd_met, exp] = Hd_conc
+                DAT[:Hd, :conc, Hd_met, exp] = Hd_conc
+                DAT[method, :ep, :conc, Hd_met, exp] = ep_conc
+                DAT[method, :eperr, :conc, Hd_met, exp] = ep_std * exp_xi
+            end
+
+        end # for exp in Hd.EXPS
     end
 
 end
@@ -209,15 +181,15 @@ let
     ps = Plots.Plot[]
     for method in [HOMO, EXPECTED, BOUNDED]
         p = plot(title = string(iJR.PROJ_IDER, " method: ", method), 
-            xlabel = "model biom", ylabel = "exp biom")
+            xlabel = "exp biom", ylabel = "model biom")
         ep_vals = DAT[method, :ep, :flx, iJR.BIOMASS_IDER, Hd.EXPS]
         eperr_vals = DAT[method, :eperr, :flx, iJR.BIOMASS_IDER, Hd.EXPS]
         Hd_vals = DAT[method, :Hd, :flx, iJR.BIOMASS_IDER, Hd.EXPS]
         color = [exp_colors[exp] for exp in Hd.EXPS]
         m, M = myminmax([Hd_vals; ep_vals])
         margin = abs(M - m) * 0.1
-        scatter!(p, ep_vals, Hd_vals; 
-            xerr = eperr_vals,
+        scatter!(p, Hd_vals, ep_vals; 
+            yerr = eperr_vals,
             label = "", color,
             alpha = 0.7, ms = 7,
             xlim = [m - margin, M + margin],
@@ -252,16 +224,6 @@ let
     mysavefig(p, "obj_val_vs_beta"; method)
 end
 
-# ## -------------------------------------------------------------------
-# let
-#     ps = Plots.Plot[]
-#     for method in [HOMO, EXPECTED, BOUNDED]       
-#         ep_vals = DAT[method, :ep, :flx, iJR.BIOMASS_IDER, Hd.EXPS]  
-#         push!(ps, plot(ep_vals))
-#     end
-#     mysavefig(ps, "test")    
-# end
-
 ## -------------------------------------------------------------------
 # total correlations
 let
@@ -271,9 +233,7 @@ let
         ps = Plots.Plot[]
         for method in [HOMO, EXPECTED, BOUNDED]                                            
             ep_vals = DAT[method, :ep, dat_prefix, iders, Hd.EXPS]
-            # @show ep_vals
             ep_errs = DAT[method, :eperr, dat_prefix, iders, Hd.EXPS]
-            # fba_vals = DAT[:fba, dat_prefix, iders, Hd.EXPS]
             Hd_vals = DAT[method, :Hd, dat_prefix, iders, Hd.EXPS]
             color = [ider_colors[ider] for ider in iders, exp in Hd.EXPS]
             # m, M = myminmax([fba_vals; ep_vals; Hd_vals])
@@ -282,27 +242,13 @@ let
             scatter_params = (;label = "", color, ms = 7, alpha = 0.7)
             # ep corr
             p1 = plot(title = "$(iJR.PROJ_IDER) (EP) $method", 
-                ylabel = "exp $(dat_prefix)",
-                xlabel = "model $(dat_prefix)", 
+                ylabel = "model $(dat_prefix)", 
+                xlabel = "exp $(dat_prefix)",
             )
-            scatter!(p1, ep_vals, Hd_vals; xerr = ep_errs, scatter_params...)
+            scatter!(p1, Hd_vals, ep_vals; yerr = ep_errs, scatter_params...)
             plot!(p1, [m,M], [m,M]; ls = :dash, color = :black, label = "")
             push!(ps, deepcopy(p1))
 
-            # fba corr
-            # p2 = plot(title = "$(iJR.PROJ_IDER) (FBA)", 
-            #     ylabel = "exp $(dat_prefix)",
-            #     xlabel = "model $(dat_prefix)", 
-            # )
-            # scatter!(p2, fba_vals, Hd_vals; scatter_params...)
-            # plot!(p2, [m,M], [m,M]; ls = :dash, color = :black, label = "")
-
-            # mysavefig([p1, p2], pname)
-
-            # # zoom
-            # pname = string(dat_prefix, "_tot_corr_zoom")
-            # ps = plot.([p1, p2]; xlim = zoom_lim, ylim = zoom_lim)
-            # mysavefig(ps, pname)
         end
 
         layout = (1, length(ps))
@@ -349,22 +295,11 @@ let
     
 end
 
-
-## -------------------------------------------------------------------
-# let
-#     Hd_met, exp = "GLC", 1
-#     datfile = INDEX[method, :DFILE, exp]
-#     dat = deserialize(datfile)
-#     # dat[[:ep, :fba, :Hd], :flx, Hd_met, exp]
-#     dat[:ep, :flx, Hd_met, exp]
-# end
-
 ## -------------------------------------------------------------------
 # marginal distributions
 let 
     objider = iJR.BIOMASS_IDER
     size = [300, 250]
-    # method = EXPECTED
 
     # Iders
     model_iders, Hd_iders = [iJR.BIOMASS_IDER], ["D"]
@@ -454,3 +389,27 @@ let
     end
 
 end 
+
+## -------------------------------------------------------------------
+# leyends
+# TODO fix this...
+let
+    for (title, colors) in [
+            ("exp", exp_colors), 
+            ("iders", ider_colors),
+            ("method", method_colors)
+        ]
+    p = plot(; framestyle = :none)
+        scolors = sort(collect(colors); by = (p) -> string(first(p)))
+        for (id, color) in scolors
+            scatter!(p, [0], [0];
+                thickness_scaling = 1,
+                color, ms = 8, label = string(id),
+                legendfontsize=10, 
+                # size = [300, 900],
+                # legend = :left
+            )
+        end
+        mysavefig(p, "$(title)_color_legend")
+    end
+end
