@@ -227,8 +227,7 @@ end
 ## -------------------------------------------------------------------
 # total correlations
 let
-    for (dat_prefix, iders, zoom_lim) in [(:flx, FLX_IDERS, [-2.5, 2.5]), 
-                                            (:conc, CONC_IDERS, [0.0, 100.0])]
+    for (dat_prefix, iders) in [(:flx, FLX_IDERS), (:conc, CONC_IDERS)]
 
         ps = Plots.Plot[]
         for method in [HOMO, EXPECTED, BOUNDED]                                            
@@ -236,9 +235,12 @@ let
             ep_errs = DAT[method, :eperr, dat_prefix, iders, Hd.EXPS]
             Hd_vals = DAT[method, :Hd, dat_prefix, iders, Hd.EXPS]
             color = [ider_colors[ider] for ider in iders, exp in Hd.EXPS]
-            # m, M = myminmax([fba_vals; ep_vals; Hd_vals])
+            
+            diffsign = sign.(Hd_vals) .* sign.(ep_vals)
+            Hd_vals = abs.(Hd_vals) .* diffsign
+            ep_vals = abs.(ep_vals) .* diffsign
+            
             m, M = myminmax([ep_vals; Hd_vals])
-
             scatter_params = (;label = "", color, ms = 7, alpha = 0.7)
             # ep corr
             p1 = plot(title = "$(iJR.PROJ_IDER) (EP) $method", 
@@ -374,7 +376,7 @@ let
             push!(ps, p)
         end
 
-        for k in [:xi, :D, :cGLC]
+        for k in [:xi, :D, :sGLC]
             p = plot(;title = Hd_ider, size)
             xticks =  (Hd.EXPS, string.(Hd.EXPS))
             p = bar!(p, Hd.EXPS, Hd.val(k); title = k, label = "", xticks)
@@ -387,6 +389,88 @@ let
         pname = string(Hd_ider, "_marginals_vs_beta")
         mysavefig(ps2, pname)
     end
+
+end 
+
+## -------------------------------------------------------------------
+# marginals v2
+let 
+    objider = iJR.BIOMASS_IDER
+    size = [300, 250]
+
+    # Iders
+    model_iders, Hd_iders = [iJR.BIOMASS_IDER], ["D"]
+    for Hd_met in CONC_IDERS
+        model_met = iJR.Hd_mets_map[Hd_met]
+        model_exch = iJR.exch_met_map[model_met]
+        push!(model_iders, model_exch)
+        push!(Hd_iders, string("u", Hd_met))
+    end
+    
+    for (model_ider, Hd_ider) in zip(model_iders, Hd_iders)
+        marg_params = (;xlabel = string(Hd_ider), yaxis = nothing, ylabel = "prob")
+
+        epps = Plots.Plot[]
+        exps = Plots.Plot[]
+        for method in [BOUNDED, EXPECTED, HOMO]
+            expp = plot(;title = string("Experimental"), marg_params...)
+            epp = plot(;title = string(" MaxEnt: ", method), marg_params...)
+            margin, m, M = -Inf, Inf, -Inf
+            
+            # EP
+            for exp in EXPS
+                Hd_av = Hd.val(Hd_ider, exp)
+                color = exp_colors[exp]    
+
+                datfile = INDEX[method, :DFILE, exp]
+                dat = deserialize(datfile)
+                model = dat[:model]
+                objidx = ChU.rxnindex(model, objider)
+                epouts = dat[:epouts]
+                exp_beta = maximum(keys(epouts))
+                epout = epouts[exp_beta]
+                ep_av = ChU.av(model, epout, model_ider)
+                ep_va = sqrt(ChU.va(model, epout, model_ider))
+                
+                # bounds = ChU.bounds(model, model_ider)
+                ChP.plot_marginal!(epp, model, [epout], model_ider; 
+                    legend = false, color, alpha = 0.8, lw = 3
+                )
+                
+                m = minimum([m, ep_av, Hd_av])
+                M = maximum([M, ep_av, Hd_av])
+                margin = maximum([margin, 3 * ep_va])
+
+                # Experimental
+                vline!(expp, [Hd_av]; label = "", lw = 3, color, alpha = 0.8)
+                
+            end
+            
+            map([expp, epp]) do p
+                plot!(p; xlim = [m - margin, M + margin], size)
+            end
+
+            push!(epps, epp)
+            push!(exps, expp)
+        end
+
+        extras = Plots.Plot[]
+        for k in [:xi, :D, :sGLC]
+            p = plot(;title = "Experimental", size, 
+                xlabel = "rep", ylabel = string(k))
+            xticks =  (EXPS, string.(EXPS))
+            vals = [Hd.val(k, exp) for exp in EXPS]
+            color = [exp_colors[exp] for exp in EXPS]
+            p = bar!(p, EXPS, vals; label = "", xticks, color)
+            push!(extras, p)
+        end
+
+        ps = Plots.Plot[exps; epps; extras]
+        layout = (3, 3)
+        pname = string(Hd_ider, "_marginals_v2")
+        mysavefig(ps, pname; layout)
+
+    end # for (model_ider, Hd_ider)
 
 end 
 
