@@ -22,12 +22,15 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
     import Chemostat.LP.MathProgBase
 
     const Ch = Chemostat
-    const ChP = Ch.Plots
+    
     const ChU = Ch.Utils
     const ChSS = Ch.SteadyState
     const ChLP = Ch.LP
     const ChEP = Ch.MaxEntEP
     const ChSU = Ch.SimulationUtils
+
+    import ChemostatPlots
+    const ChP = ChemostatPlots
 
     import UtilsJL
     const UJL = UtilsJL
@@ -244,8 +247,8 @@ let
             scatter_params = (;label = "", color, ms = 7, alpha = 0.7)
             # ep corr
             p1 = plot(title = "$(iJR.PROJ_IDER) (EP) $method", 
-                ylabel = "model $(dat_prefix)", 
-                xlabel = "exp $(dat_prefix)",
+                ylabel = "model signdiff $(dat_prefix)", 
+                xlabel = "exp signdiff $(dat_prefix)",
             )
             scatter!(p1, Hd_vals, ep_vals; yerr = ep_errs, scatter_params...)
             plot!(p1, [m,M], [m,M]; ls = :dash, color = :black, label = "")

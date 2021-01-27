@@ -8,6 +8,7 @@ ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Chemostat = "c5987326-81b3-11ea-28dd-b531745de20f"
+ChemostatPlots = "a87e7f4e-3b34-4b5e-ad6b-f0ab85127471"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
@@ -22,7 +23,8 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 UtilsJL = "1d417f3e-fd42-11ea-18da-dda57c9b97b2"
 
 [compat]
-julia = "1.1"
+Chemostat = "0.9"
+julia = "1.5"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
