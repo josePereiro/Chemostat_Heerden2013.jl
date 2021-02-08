@@ -40,7 +40,7 @@ end
 
 ## -----------------------------------------------------------------------------------------------
 LPDAT = ChU.load_data(iJR.LP_DAT_FILE)
-const FBA_BOUNDED = :FBA_BOUNDEDs
+const FBA_BOUNDED = :FBA_BOUNDED
 const FBA_OPEN = :FBA_OPEN
 const YIELD = :YIELD
 
@@ -107,7 +107,7 @@ end
 # yield vs stuff
 let
     ps = Plots.Plot[]
-    for id in [:D, :cGLC, :xi, :uGLC]
+    for id in [:D, :cGLC, :xi, :uGLC, :sGLC]
         p = plot(;title = "yield vs $(id)", xlabel = "exp $id", ylabel = "yield")
         for exp in EXPS
             !haskey(LPDAT, YIELD, :model, exp) && continue
@@ -135,6 +135,12 @@ end
 
 ## -----------------------------------------------------------------------------------------------
 # correlations
+DAT = UJL.DictTree()
+DAT[:FLX_IDERS] = FLX_IDERS
+DAT[:CONC_IDERS] = CONC_IDERS
+DAT[:EXPS] = EXPS
+
+## -----------------------------------------------------------------------------------------------
 # ["GLC", "AcA", "FA"]
 FLX_IDERS_MAP = Dict(
     "GLC" => "EX_glc_LPAREN_e_RPAREN__REV",
@@ -145,6 +151,7 @@ FLX_IDERS_MAP = Dict(
 )
 
 let
+
     yield_p = plot(title = "yield tot corrs"; xlabel = "exp flx", ylabel = "model flx")
     open_fba_p = plot(title = "open fba tot corrs"; xlabel = "exp flx", ylabel = "model flx")
     bounded_fba_p = plot(title = "bounded fba tot corrs"; xlabel = "exp flx", ylabel = "model flx")
@@ -163,10 +170,13 @@ let
                 yout = LPDAT[YIELD, :yout, exp]
 
                 ymax_flx = ChU.av(model, yout, model_ider)
+                DAT[YIELD, :Hd, :flx, Hd_ider, exp] = Hd_flx
+                DAT[YIELD, :lp, :flx, Hd_ider, exp] = ymax_flx
+
                 scatter!(yield_p, [Hd_flx], [ymax_flx]; ms = 8,
                     color, alpha = 0.6, label = ""
                 )
-
+                
                 # bounded fba
                 for (fba_type, p) in [(FBA_BOUNDED, bounded_fba_p) , 
                                     (FBA_OPEN, open_fba_p)]
@@ -175,6 +185,9 @@ let
                     fbaout = LPDAT[fba_type, :fbaout, exp]
                     
                     fba_flx = ChU.av(model, fbaout, model_ider)
+                    DAT[fba_type, :Hd, :flx, Hd_ider, exp] = Hd_flx
+                    DAT[fba_type, :lp, :flx, Hd_ider, exp] = fba_flx
+
                     scatter!(p, [Hd_flx], [fba_flx]; ms = 8,
                         color, alpha = 0.6, label = ""
                     )
@@ -194,9 +207,11 @@ let
     pname = "flx_tot_corr"
     layout = (1, 3)
     mysavefig(ps, pname; layout)
+
 end
 
 ## -------------------------------------------------------------------
+# Conc correlations
 let
     yield_p = plot(title = "yield tot corrs"; xlabel = "exp conc", ylabel = "model conc")
     open_fba_p = plot(title = "open fba tot corrs"; xlabel = "exp conc", ylabel = "model conc")
@@ -221,11 +236,14 @@ let
                 ymax_flx = ChU.av(model, yout, model_ider)
                 ymax_sval = Hd_cval == 0 ? ymax_flx * exp_xi :
                     max(Hd_cval - ymax_flx * exp_xi, 0.0)
+                DAT[YIELD, :Hd, :conc, Hd_ider, exp] = Hd_sval
+                DAT[YIELD, :lp, :conc, Hd_ider, exp] = ymax_flx    
+
                 scatter!(yield_p, [Hd_sval], [ymax_sval]; ms = 8,
                     color, alpha = 0.6, label = ""
                 )
 
-                # bounded fba
+                # fba
                 for (fba_type, p) in [(FBA_BOUNDED, bounded_fba_p) , 
                                     (FBA_OPEN, open_fba_p)]
 
@@ -236,6 +254,9 @@ let
                     fba_flx = ChU.av(model, fbaout, model_ider)
                     fba_sval = Hd_cval == 0 ? fba_flx * exp_xi :
                         max(Hd_cval - fba_flx * exp_xi, 0.0)
+                    DAT[fba_type, :Hd, :conc, Hd_ider, exp] = Hd_sval
+                    DAT[fba_type, :lp, :conc, Hd_ider, exp] = fba_sval
+
                     scatter!(p, [Hd_sval], [fba_sval]; ms = 8,
                         color, alpha = 0.6, label = ""
                     )
@@ -255,6 +276,14 @@ let
     pname = "conc_tot_corr"
     layout = (1, 3)
     mysavefig(ps, pname; layout)
+end
+
+## -------------------------------------------------------------------
+# Inter project comunication
+let
+    CORR_DAT = isfile(iJR.CORR_DAT_FILE) ? ChU.load_data(iJR.CORR_DAT_FILE) : Dict()
+    CORR_DAT[:LP] = DAT
+    ChU.save_data(iJR.CORR_DAT_FILE, CORR_DAT)
 end
 
 ## -------------------------------------------------------------------

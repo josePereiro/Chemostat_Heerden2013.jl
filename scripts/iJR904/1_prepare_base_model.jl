@@ -5,6 +5,7 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
     import CSV
     import MAT
     using DataFrames
+    import SparseArrays
     using Serialization
 
     # -------------------------------------------------------------------
@@ -53,6 +54,16 @@ model = ChU.MetNet(mat_model; reshape = true);
 # the maximal experimental growth rate in Heerden2013 is ~0.2 1/h
 # The raw model present a growth rate bigger than that, so it is ok
 # to use it directly as base model
+partial_test(model)
+
+## -------------------------------------------------------------------
+# Gene intactivations
+# Heerden2013 describes some gene modifications
+# https://doi.org/10.1186/1475-2859-12-80. Table 2
+ChU.tagprintln_inmw("GENE MODIFICATIONS")
+for (name, ider) in iJR.Hd_to_inactivate_map
+    ChU.bounds!(model, ider, 0.0, 0.0)
+end
 partial_test(model)
 
 ## -------------------------------------------------------------------
@@ -186,7 +197,7 @@ end;
 # saving
 ChU.save_data(iJR.EXCH_MET_MAP_FILE, exch_met_map)
 
-## -------------------------------------------------------------------
+
 # FVA PREPROCESSING
 compressed(model) = model |> ChU.struct_to_dict |> ChU.compressed_copy
 const BASE_MODELS = isfile(iJR.BASE_MODELS_FILE) ? 
@@ -225,13 +236,12 @@ for (exp, cGLC) in enumerate(cGLCs)
         verbose = true
     )
     partial_test(fva_model)
-    ChU.summary(fva_model)
 
     # storing
     D[exp] = compressed(fva_model)
     
-    ## -------------------------------------------------------------------
-    # caching
-    ChU.save_data(iJR.BASE_MODELS_FILE, BASE_MODELS);
-    GC.gc()
 end
+
+## -------------------------------------------------------------------
+# SAVING
+ChU.save_data(iJR.BASE_MODELS_FILE, BASE_MODELS);

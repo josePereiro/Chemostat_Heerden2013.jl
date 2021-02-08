@@ -82,9 +82,13 @@ method_colors = Dict(
 )
 
 ## -------------------------------------------------------------------
+# Collect
 DAT = ChU.DictTree()
 let 
     objider = iJR.BIOMASS_IDER
+    DAT[:CONC_IDERS] = CONC_IDERS
+    DAT[:FLX_IDERS] = FLX_IDERS
+    DAT[:EXPS] = EXPS
 
     for method in [HOMO, EXPECTED, BOUNDED]
         for exp in Hd.EXPS
@@ -153,7 +157,13 @@ let
 
         end # for exp in Hd.EXPS
     end
-
+end
+## -------------------------------------------------------------------
+# Inter project comunication
+let
+    CORR_DAT = isfile(iJR.CORR_DAT_FILE) ? ChU.load_data(iJR.CORR_DAT_FILE) : Dict()
+    CORR_DAT[:MAXENT_EP] = DAT
+    ChU.save_data(iJR.CORR_DAT_FILE, CORR_DAT)
 end
 
 ## -------------------------------------------------------------------

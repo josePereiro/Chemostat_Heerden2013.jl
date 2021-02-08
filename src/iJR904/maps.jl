@@ -19,17 +19,17 @@ end
 
 # Map for Heerden2013 https://doi.org/10.1186/1475-2859-12-80. Table 2
 Hd_to_inactivate_map = Dict(
-    "2-ketobutyrate formate lyase"=>["OBTFL"],
-    "Acetate kinase"=>["ACKr"],
-    "Alcohol dehydrogenase"=>["ALCD19","ALCD2x"],
-    "Citrate lyase"=>["CITL"],
-    "Lactate dehydrogenase"=>["L_DASH_LACD2","L_DASH_LACD3", "LDH_D", "LDH_D"],
-    "Methylglyoxal synthase"=>["MGSA"],
-    "NAD+-linked malic enzyme"=>["ME1"],
-    "Phosphotransacetylase"=>["PTAr"],
-    "Pyruvate formate lyase"=>["PFL"],
-    "Pyruvate oxidase"=>["POX"],
-#     "Threonine decarboxylase"=>[""] # not found in model
+    "2-ketobutyrate formate lyase"=>"OBTFL",
+    "Acetate kinase"=>"ACKr",
+    "Alcohol dehydrogenase"=>"ALCD19",
+    "Citrate lyase"=>"CITL",
+    "Lactate dehydrogenase"=>"LDH_D",
+    "Methylglyoxal synthase"=>"MGSA",
+    "NAD+-linked malic enzyme"=>"ME1",
+    "Phosphotransacetylase"=>"PTAr",
+    "Pyruvate formate lyase"=>"PFL",
+    "Pyruvate oxidase"=>"POX",
+    # "Threonine decarboxylase"=> "" # not found in model TODO: Find it
 )
 
 # the model has no way to simulate overexpression
