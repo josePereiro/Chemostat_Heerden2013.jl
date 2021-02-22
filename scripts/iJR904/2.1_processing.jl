@@ -11,8 +11,8 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
     # the package enviroment (see README)
     import Chemostat_Heerden2013
     const ChHd = Chemostat_Heerden2013
-    const Hd  = ChHd.HeerdenData;
-    const BD  = ChHd.BegData;
+    const Hd  = ChHd.HeerdenData
+    const BD  = ChHd.BegData
     const iJR = ChHd.iJR904
 
     # -------------------------------------------------------------------
@@ -292,10 +292,6 @@ let
             ep_vals = DAT[method, :ep, :flx, ider, Hd.EXPS]
             plot!(p, Hd.EXPS, ep_vals; 
                 label = string(method), color, alpha = 0.5, lw = 5, ls = :dash, xticks)
-            
-            # fba_vals = DAT[method, :fba, :flx, ider, Hd.EXPS]
-            # plot!(p, Hd.EXPS, fba_vals; 
-            #     label = "fba", color = :red, alpha = 0.5, lw = 5, ls = :dash, xticks)
             
             fva_ranges = DAT[method, :fva, :flx, ider, Hd.EXPS]
             plot!(p, Hd.EXPS, last.(fva_ranges);  

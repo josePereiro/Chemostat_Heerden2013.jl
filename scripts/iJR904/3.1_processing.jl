@@ -147,9 +147,9 @@ FLX_IDERS_MAP = Dict(
     "AcA" => "EX_ac_LPAREN_e_RPAREN_",
     "FA" => "EX_for_LPAREN_e_RPAREN_",
     "SA" => "EX_succ_LPAREN_e_RPAREN_",
-    "D" => iJR.BIOMASS_IDER
 )
 
+# Flx correlations
 let
 
     yield_p = plot(title = "yield tot corrs"; xlabel = "exp flx", ylabel = "model flx")
@@ -158,11 +158,10 @@ let
 
     margin, m, M = -Inf, Inf, -Inf
     for (Hd_ider, model_ider) in FLX_IDERS_MAP
-        Hd_fun = Hd_ider == "D" ? Hd.val : Hd.uval
         for exp in EXPS
 
                 color = ider_colors[Hd_ider]
-                Hd_flx = abs(Hd_fun(Hd_ider, exp)) # every body is possitive here
+                Hd_flx = abs(Hd.uval(Hd_ider, exp)) # every body is possitive here
                 
                 # yield
                 !haskey(LPDAT, YIELD, :model, exp) && continue
@@ -210,6 +209,39 @@ let
 
 end
 
+## -----------------------------------------------------------------------------------------------
+# Dev
+let
+    dsource = :Hd
+    msource = :lp
+    method = FBA_BOUNDED
+    D = DAT
+
+    exp_vals, model_vals = [], []
+    for exp in D[:EXPS], ider in D[:FLX_IDERS]
+        if !haskey(D, method, msource, :flx, ider, exp) 
+            @warn("Not found", ider, exp)
+            continue
+        end
+
+        exp_val = D[method, dsource, :flx, ider, exp]
+        model_val = D[method, msource, :flx, ider, exp]
+        push!(exp_vals, exp_val)
+        push!(model_vals, model_val)
+    end
+
+    diffsign = sign.(exp_vals) .* sign.(model_vals)
+    diffsign = ifelse.(diffsign .== 0, 1.0, diffsign)
+    exp_vals = abs.(exp_vals) .* diffsign
+    model_vals = abs.(model_vals) .* diffsign
+    
+    p = scatter(exp_vals, model_vals; label = "false")
+    plot!(p, exp_vals, exp_vals; label = "", ls = :dash)
+    pname = "test.png" 
+    mysavefig(p, pname)
+
+end
+
 ## -------------------------------------------------------------------
 # Conc correlations
 let
@@ -219,7 +251,6 @@ let
     
     margin, m, M = -Inf, Inf, -Inf
     for (Hd_ider, model_ider) in FLX_IDERS_MAP
-        Hd_ider == "D" && continue
         for exp in EXPS
 
                 color = ider_colors[Hd_ider]
@@ -266,6 +297,7 @@ let
 
         end
     end
+
     margin = abs(M - m) * 0.1
     ps = [yield_p, bounded_fba_p, open_fba_p]
     for p in ps

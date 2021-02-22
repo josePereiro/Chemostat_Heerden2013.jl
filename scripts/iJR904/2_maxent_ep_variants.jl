@@ -4,6 +4,7 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
 @time begin
     import SparseArrays
     using Base.Threads
+    using Serialization
 
     # -------------------------------------------------------------------
     # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in 
@@ -27,7 +28,8 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
     const ChEP = Ch.MaxEntEP
     const ChSU = Ch.SimulationUtils
 
-    using Serialization
+    import UtilsJL
+    const UJL = UtilsJL
     # using Statistics
 end
 
@@ -58,7 +60,7 @@ const EXPECTED = :EXPECTED
 ## -------------------------------------------------------------------
 # EXPECTED and HOMO
 let
-
+    # Feed jobs
     Ch = Channel(1) do ch
         cGLCs = Hd.val("cGLC")
         for (exp, cGLC)  in enumerate(cGLCs)
@@ -74,13 +76,14 @@ let
                 lock(WLOCK) do
                     INDEX[EXPECTED, :DFILE, exp] = datfile
                     @info("Cached loaded (skipping)",
-                        exp, cGLC,datfile, threadid()
+                        exp, cGLC,datfile, thid
                     )
                     println()
                 end
                 continue
             end
 
+            ## -------------------------------------------------------------------
             # setup
             model = base_model(exp)
             objidx = ChU.rxnindex(model, iJR.BIOMASS_IDER)
@@ -88,27 +91,28 @@ let
             exp_growth = Hd.val("D", exp)
             
             lock(WLOCK) do
-                @info("Doing $(EXPECTED)", exp, cGLC, threadid())
+                @info("Doing $(EXPECTED)", exp, cGLC, thid)
                 println()
             end
             
+            ## -------------------------------------------------------------------
             # gradien descent
             epouts = Dict()
-            x0 = [0.0] 
-            @assert x0 == [0.0] # Must be zero for HOMO
-            x1 = [10.0]
-            C = [5e3]
+            x0 = 0.0
+            @assert x0 == 0.0 # Must be zero for HOMO
+            x1 = 10.0
+            maxΔ = 5e3
             th = 1e-3
             epout_seed = nothing
-            target = [exp_growth]
+            target = exp_growth
             beta_vec = zeros(size(model, 2))
 
             upfrec_time = 10 # secunds
             last_uptime = time()
             it = 1
 
-            function upfun(betas)
-                beta = first(betas)
+            ## -------------------------------------------------------------------
+            function upfun(beta)
 
                 if haskey(epouts, beta) 
                     epout = epouts[beta]
@@ -130,28 +134,29 @@ let
 
                 update = it == 1 || abs(last_uptime - time()) > upfrec_time || 
                     epout.status != ChEP.CONVERGED_STATUS
-                if update
-                    lock(WLOCK) do
-                        diff = abs.(exp_growth - ep_growth)
-                        @info(
-                            "Grad descent... ", 
-                            exp, it, 
-                            epout.status, epout.iter, 
-                            ep_growth, exp_growth, diff, 
-                            beta,
-                            threadid()
-                        ); println()
-                        it += 1
-                        last_uptime = time()
-                    end
+                update && lock(WLOCK) do
+                    diff = abs.(exp_growth - ep_growth)
+                    @info(
+                        "Grad descent... ", 
+                        exp, it, 
+                        epout.status, epout.iter, 
+                        ep_growth, exp_growth, diff, 
+                        beta,
+                        thid
+                    ); println()
+                    it += 1
+                    last_uptime = time()
                 end
-                [ep_growth]
+                return ep_growth
             end
 
+            ## -------------------------------------------------------------------
             # maxent
-            expβ = ChSU.grad_desc(upfun; x0, x1, th, C, 
-                target, maxiters = 2000, verbose = false) |> first
+            expβ = UJL.grad_desc(upfun; x0, x1, th, maxΔ, 
+                target, maxiters = 2000, verbose = false
+            )
 
+            ## -------------------------------------------------------------------
             lock(WLOCK) do
                 # Storing
                 dat = Dict()
@@ -169,9 +174,10 @@ let
                     exp, expβ, 
                     length(epouts),
                     ep_growth, exp_growth, diff, 
-                    threadid()
+                    thid
                 ); println()
             end
+
         end # for (exp, cGLC) in Ch
     end # for thid in 1:nthreads()
 end
@@ -181,6 +187,7 @@ end
 let
     biomass_f = 0.01
 
+    # Feed jobs
     Ch = Channel(1) do ch
         cGLCs = Hd.val("cGLC")
         for (exp, cGLC)  in enumerate(cGLCs)
@@ -196,7 +203,7 @@ let
                 lock(WLOCK) do
                     INDEX[BOUNDED, :DFILE, exp] = datfile
                     @info("Cached loaded (skipping)",
-                        exp, cGLC, datfile, threadid()
+                        exp, cGLC, datfile, thid
                     ); println()
                 end
                 continue
@@ -217,7 +224,7 @@ let
 
             lock(WLOCK) do
                 @info("Doing $(BOUNDED)", 
-                    exp, cGLC, threadid()
+                    exp, cGLC, thid
                 ); println()
             end
 
@@ -238,7 +245,7 @@ let
                 serialize(datfile, dat)
                 INDEX[BOUNDED, :DFILE, exp] = datfile
 
-                @info("Finished ", exp, threadid())
+                @info("Finished ", exp, thid)
                 println()
             end
         end # for (exp, cGLC) in Ch
@@ -249,6 +256,8 @@ end
 # HOMO
 # It was computed in EXPECTED
 let
+
+    # Feed jobs
     Ch = Channel(1) do ch
         cGLCs = Hd.val("cGLC")
         for (exp, cGLC)  in enumerate(cGLCs)
@@ -261,7 +270,7 @@ let
 
             lock(WLOCK) do
                 @info("Collecting $(HOMO)", 
-                    exp, cGLC, threadid()
+                    exp, cGLC, thid
                 ); println()
             end
 
@@ -278,8 +287,8 @@ let
             homo_file = dat_file(string(DAT_FILE_PREFFIX, HOMO); exp)
             serialize(homo_file, homo_dat)
             INDEX[HOMO, :DFILE, exp] = homo_file
-        end
-    end
+        end # for (exp, cGLC) in Ch
+    end # @threads for thid in 1:nthreads()
 end
 
 ## -------------------------------------------------------------------
