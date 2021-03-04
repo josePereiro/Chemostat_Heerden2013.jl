@@ -45,20 +45,20 @@ function dat_file(name; kwargs...)
     joinpath(iJR.MODEL_PROCESSED_DATA_DIR, fname)
 end
 
-## -------------------------------------------------------------------
+# -------------------------------------------------------------------
 function base_model(exp)
     BASE_MODELS = ChU.load_data(iJR.BASE_MODELS_FILE; verbose = false);
     model_dict = BASE_MODELS["fva_models"][exp]
     ChU.MetNet(;model_dict...) |> ChU.uncompressed_model
 end
 
-## -------------------------------------------------------------------
-const HOMO = :HOMO
-const BOUNDED = :BOUNDED
-const EXPECTED = :EXPECTED
+# -------------------------------------------------------------------
+const ME_HOMO = :ME_HOMO
+const ME_FIXXED = :ME_FIXXED
+const ME_EXPECTED = :ME_EXPECTED
 
 ## -------------------------------------------------------------------
-# EXPECTED and HOMO
+# ME_EXPECTED and ME_HOMO
 let
     # Feed jobs
     Ch = Channel(1) do ch
@@ -71,10 +71,10 @@ let
     @threads for thid in 1:nthreads()
         for (exp, cGLC) in Ch
             # handle cache
-            datfile = dat_file(string(DAT_FILE_PREFFIX, EXPECTED); exp)
+            datfile = dat_file(string(DAT_FILE_PREFFIX, ME_EXPECTED); exp)
             if isfile(datfile)
                 lock(WLOCK) do
-                    INDEX[EXPECTED, :DFILE, exp] = datfile
+                    INDEX[ME_EXPECTED, :DFILE, exp] = datfile
                     @info("Cached loaded (skipping)",
                         exp, cGLC,datfile, thid
                     )
@@ -91,7 +91,7 @@ let
             exp_growth = Hd.val("D", exp)
             
             lock(WLOCK) do
-                @info("Doing $(EXPECTED)", exp, cGLC, thid)
+                @info("Doing $(ME_EXPECTED)", exp, cGLC, thid)
                 println()
             end
             
@@ -99,7 +99,7 @@ let
             # gradien descent
             epouts = Dict()
             x0 = 0.0
-            @assert x0 == 0.0 # Must be zero for HOMO
+            @assert x0 == 0.0 # Must be zero for ME_HOMO
             x1 = 10.0
             maxΔ = 5e3
             th = 1e-3
@@ -166,7 +166,7 @@ let
 
                 # caching
                 serialize(datfile, dat)
-                INDEX[EXPECTED, :DFILE, exp] = datfile
+                INDEX[ME_EXPECTED, :DFILE, exp] = datfile
 
                 ep_growth = ChU.av(epouts[expβ])[objidx]
                 diff = abs.(exp_growth - ep_growth)
@@ -183,7 +183,7 @@ let
 end
 
 ## -------------------------------------------------------------------
-# BOUNDED
+# ME_FIXXED
 let
     biomass_f = 0.01
 
@@ -198,10 +198,10 @@ let
     @threads for thid in 1:nthreads()
         for (exp, cGLC) in Ch
             # handle cache
-            datfile = dat_file(string(DAT_FILE_PREFFIX, BOUNDED); exp)
+            datfile = dat_file(string(DAT_FILE_PREFFIX, ME_FIXXED); exp)
             if isfile(datfile)
                 lock(WLOCK) do
-                    INDEX[BOUNDED, :DFILE, exp] = datfile
+                    INDEX[ME_FIXXED, :DFILE, exp] = datfile
                     @info("Cached loaded (skipping)",
                         exp, cGLC, datfile, thid
                     ); println()
@@ -223,7 +223,7 @@ let
             )
 
             lock(WLOCK) do
-                @info("Doing $(BOUNDED)", 
+                @info("Doing $(ME_FIXXED)", 
                     exp, cGLC, thid
                 ); println()
             end
@@ -243,7 +243,7 @@ let
 
                 # caching
                 serialize(datfile, dat)
-                INDEX[BOUNDED, :DFILE, exp] = datfile
+                INDEX[ME_FIXXED, :DFILE, exp] = datfile
 
                 @info("Finished ", exp, thid)
                 println()
@@ -253,8 +253,8 @@ let
 end
 
 ## -------------------------------------------------------------------
-# HOMO
-# It was computed in EXPECTED
+# ME_HOMO
+# It was computed in ME_EXPECTED
 let
 
     # Feed jobs
@@ -269,24 +269,24 @@ let
         for (exp, cGLC) in Ch
 
             lock(WLOCK) do
-                @info("Collecting $(HOMO)", 
+                @info("Collecting $(ME_HOMO)", 
                     exp, cGLC, thid
                 ); println()
             end
 
-            exp_file = INDEX[EXPECTED, :DFILE, exp]
+            exp_file = INDEX[ME_EXPECTED, :DFILE, exp]
             exp_dat = deserialize(exp_file)
 
-            homo_dat = Dict()
-            homo_dat[:exp_beta] = 0.0
+            ME_HOMO_dat = Dict()
+            ME_HOMO_dat[:exp_beta] = 0.0
             epout = exp_dat[:epouts][0.0]  # At beta 0
-            homo_dat[:epouts] = Dict(0.0 => epout)
-            homo_dat[:model] = exp_dat[:model]
+            ME_HOMO_dat[:epouts] = Dict(0.0 => epout)
+            ME_HOMO_dat[:model] = exp_dat[:model]
 
-            # save homo
-            homo_file = dat_file(string(DAT_FILE_PREFFIX, HOMO); exp)
-            serialize(homo_file, homo_dat)
-            INDEX[HOMO, :DFILE, exp] = homo_file
+            # save ME_HOMO
+            ME_HOMO_file = dat_file(string(DAT_FILE_PREFFIX, ME_HOMO); exp)
+            serialize(ME_HOMO_file, ME_HOMO_dat)
+            INDEX[ME_HOMO, :DFILE, exp] = ME_HOMO_file
         end # for (exp, cGLC) in Ch
     end # @threads for thid in 1:nthreads()
 end
