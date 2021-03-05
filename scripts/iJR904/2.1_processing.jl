@@ -504,13 +504,13 @@ let
     end
     
     for (model_ider, Hd_ider) in zip(model_iders, Hd_iders)
-        marg_params = (;xlabel = string(Hd_ider), yaxis = nothing, ylabel = "prob")
+        marg_params = (;xlabel = string(Hd_ider), yaxis = nothing, ylabel = "prob", titlefont = 8)
 
         epps = Plots.Plot[]
         exps = Plots.Plot[]
         for method in [ME_Z_FIXXED_G_BOUNDED, ME_Z_EXPECTED_G_BOUNDED, ME_Z_OPEN_G_OPEN]
             expp = plot(;title = string("Experimental"), marg_params...)
-            epp = plot(;title = string(" MaxEnt: ", method), marg_params...)
+            epp = plot(;title = string(" MaxEnt: \n", method), marg_params...)
             margin, m, M = -Inf, Inf, -Inf
             
             # EP
@@ -553,7 +553,8 @@ let
         extras = Plots.Plot[]
         for k in [:xi, :D, :sGLC]
             p = plot(;title = "Experimental", size, 
-                xlabel = "rep", ylabel = string(k))
+                xlabel = "rep", ylabel = string(k), titlefont = 8
+            )
             xticks =  (EXPS, string.(EXPS))
             vals = [Hd.val(k, exp) for exp in EXPS]
             color = [exp_colors[exp] for exp in EXPS]
