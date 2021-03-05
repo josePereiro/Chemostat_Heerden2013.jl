@@ -48,9 +48,10 @@ end
 INDEX = ChU.load_data(iJR.MAXENT_VARIANTS_INDEX_FILE; verbose = false);
 
 # -------------------------------------------------------------------
-const ME_HOMO = :ME_HOMO
-const ME_FIXXED = :ME_FIXXED
-const ME_EXPECTED = :ME_EXPECTED
+const ME_Z_OPEN_G_OPEN          = :ME_Z_OPEN_G_OPEN           # Do not use extra constraints
+const ME_Z_EXPECTED_G_BOUNDED   = :ME_Z_EXPECTED_G_BOUNDED    # Match ME and Dy biom average and constraint av_ug
+const ME_Z_EXPECTED_G_MOVING    = :ME_Z_EXPECTED_G_MOVING     # 
+const ME_Z_FIXXED_G_BOUNDED     = :ME_Z_FIXXED_G_BOUNDED      # Fix biom around observed
 
 # -------------------------------------------------------------------
 fileid = "2.1"
@@ -76,10 +77,18 @@ ider_colors = Dict(
 )
 
 method_colors = Dict(
-    ME_HOMO => :red,
-    ME_FIXXED => :orange,
-    ME_EXPECTED => :blue,
+    ME_Z_OPEN_G_OPEN => :red,
+    ME_Z_FIXXED_G_BOUNDED => :orange,
+    ME_Z_EXPECTED_G_BOUNDED => :blue,
+    ME_Z_EXPECTED_G_MOVING => :green,
 )
+
+ALL_MODELS = [
+    ME_Z_OPEN_G_OPEN, 
+    ME_Z_EXPECTED_G_BOUNDED, 
+    ME_Z_FIXXED_G_BOUNDED, 
+    ME_Z_EXPECTED_G_MOVING
+]
 
 ## ----------------------------------------------------------------------------
 # Collect
@@ -88,18 +97,18 @@ let
     
     # CACHE
     DATfile = joinpath(iJR.MODEL_PROCESSED_DATA_DIR, "2.1_DAT.jls")
-    # if isfile(DATfile) 
-    #     global DAT = deserialize(DATfile) 
-    #     @info("DAT CACHE LOADED")
-    #     return
-    # end
+    if isfile(DATfile) 
+        global DAT = deserialize(DATfile) 
+        @info("DAT CACHE LOADED")
+        return
+    end
 
     objider = iJR.BIOMASS_IDER
     DAT[:CONC_IDERS] = CONC_IDERS
     DAT[:FLX_IDERS] = FLX_IDERS
     DAT[:EXPS] = EXPS
 
-    for exp in Hd.EXPS, method in [ME_HOMO, ME_EXPECTED, ME_FIXXED]
+    for exp in Hd.EXPS, method in ALL_MODELS
             
         datfile = INDEX[method, :DFILE, exp]
         dat = deserialize(datfile)
@@ -107,12 +116,15 @@ let
         model = dat[:model]
         objidx = ChU.rxnindex(model, objider)
         exp_beta = dat[:exp_beta] 
-        # exp_beta = dat[:epouts] |> keys |> maximum # Fix that, last beta wasn't returned at 2
         epout = dat[:epouts][exp_beta]
         exp_xi = Hd.val(:xi, exp)
 
         println()
-        @info("Doing", exp, method, exp_beta, length(dat[:epouts]), epout.iter, datfile); 
+        @info("Doing", 
+            exp, method, exp_beta, 
+            length(dat[:epouts]), 
+            epout.iter, datfile
+        ); 
 
         # Biomass
         ep_biom = ChU.av(model, epout, objidx)
@@ -182,7 +194,7 @@ end
 ## ----------------------------------------------------------------------------
 # proj 2D
 let
-    method = ME_EXPECTED
+    method = ME_Z_EXPECTED_G_MOVING
     biom_ider = iJR.BIOMASS_IDER
 
     ps_pool = Dict()
@@ -244,7 +256,7 @@ end
 ## ----------------------------------------------------------------------------
 # beta vs stuff
 let
-    method = ME_EXPECTED
+    method = ME_Z_EXPECTED_G_MOVING
     cGLC_plt = plot(;xlabel = "cGLC", ylabel = "beta")
     D_plt = plot(;xlabel = "D", ylabel = "beta")
     for exp in Hd.EXPS 
@@ -267,7 +279,7 @@ end
 # EP biomass corr
 let
     ps = Plots.Plot[]
-    for method in [ME_HOMO, ME_EXPECTED, ME_FIXXED]
+    for method in ALL_MODELS
         p = plot(title = string(iJR.PROJ_IDER, " method: ", method), 
             xlabel = "exp biom", ylabel = "model biom")
         ep_vals = DAT[method, :ep, :flx, iJR.BIOMASS_IDER, Hd.EXPS]
@@ -290,9 +302,9 @@ let
 end
 
 ## ----------------------------------------------------------------------------
-# ME_EXPECTED flux vs beta
+# flux vs beta
 let
-    method = ME_EXPECTED
+    method = ME_Z_EXPECTED_G_MOVING
     p = plot(title = iJR.PROJ_IDER, xlabel = "beta", ylabel = "biom")
     for exp in Hd.EXPS 
         datfile = INDEX[method, :DFILE, exp]
@@ -318,7 +330,7 @@ let
     for (dat_prefix, iders) in [(:flx, FLX_IDERS), (:conc, CONC_IDERS)]
 
         ps = Plots.Plot[]
-        for method in [ME_HOMO, ME_EXPECTED, ME_FIXXED]                                            
+        for method in ALL_MODELS                                            
             ep_vals = DAT[method, :ep, dat_prefix, iders, Hd.EXPS]
             ep_errs = DAT[method, :eperr, dat_prefix, iders, Hd.EXPS]
             Hd_vals = DAT[method, :Hd, dat_prefix, iders, Hd.EXPS]
@@ -361,7 +373,7 @@ let
         plot!(p, Hd.EXPS, Hd_vals; 
             label = "exp", color = :black, alpha = 0.8, lw = 3, xticks)
 
-        for method in [ME_HOMO, ME_EXPECTED, ME_FIXXED]             
+        for method in ALL_MODELS             
             color = method_colors[method]    
             
             ep_vals = DAT[method, :ep, :flx, ider, Hd.EXPS]
@@ -406,7 +418,7 @@ let
             Hd_av = Hd.val(Hd_ider, exp)
             
             # EP
-            for method in [ME_FIXXED, ME_EXPECTED, ME_HOMO]
+            for method in [ME_Z_FIXXED_G_BOUNDED, ME_Z_EXPECTED_G_BOUNDED, ME_Z_OPEN_G_OPEN]
                 color = method_colors[method]    
 
                 datfile = INDEX[method, :DFILE, exp]
@@ -428,7 +440,7 @@ let
                 M = maximum([M, ep_av, Hd_av])
                 margin = maximum([margin, 3 * ep_va])
 
-                if method == ME_EXPECTED
+                if method == ME_Z_EXPECTED_G_BOUNDED
                     for (beta, epout) in sort(epouts; by = first)
                         ep_av = ChU.av(model, epout, model_ider)
                         ep_va = sqrt(ChU.va(model, epout, model_ider))
@@ -496,7 +508,7 @@ let
 
         epps = Plots.Plot[]
         exps = Plots.Plot[]
-        for method in [ME_FIXXED, ME_EXPECTED, ME_HOMO]
+        for method in [ME_Z_FIXXED_G_BOUNDED, ME_Z_EXPECTED_G_BOUNDED, ME_Z_OPEN_G_OPEN]
             expp = plot(;title = string("Experimental"), marg_params...)
             epp = plot(;title = string(" MaxEnt: ", method), marg_params...)
             margin, m, M = -Inf, Inf, -Inf
