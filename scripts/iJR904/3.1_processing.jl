@@ -3,7 +3,7 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
 
 @time begin
     import SparseArrays
-    import Base.Threads: @threads, threadid, SpinLock
+    import Base.Threads: @threads, threadid
 
     #  ----------------------------------------------------------------------------
     # Run add https://github.com/josePereiro/Chemostat_Heerden2013.jl in the Julia Pkg REPL to install the

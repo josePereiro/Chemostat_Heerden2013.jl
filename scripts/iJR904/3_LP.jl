@@ -46,8 +46,6 @@ function base_model(exp)
 end
 
 ## -----------------------------------------------------------------------------------------------
-
-# for method in [HOMO, EXPECTED, BOUNDED]
 LPDAT = UJL.DictTree()
 let
     objider = iJR.BIOMASS_IDER
