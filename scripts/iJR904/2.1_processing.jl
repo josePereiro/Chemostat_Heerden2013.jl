@@ -191,6 +191,32 @@ let
     ChU.save_data(iJR.CORR_DAT_FILE, CORR_DAT)
 end
 
+# ## ----------------------------------------------------------------------------
+# let
+#     exp = 3
+#     method = ME_Z_EXPECTED_G_MOVING
+#     Hd_ider = FLX_IDERS[1]
+#     objider = iJR.BIOMASS_IDER
+
+#     datfile = INDEX[method, :DFILE, exp]
+#     dat = deserialize(datfile)    
+#     model = dat[:model]
+
+#     model_met = iJR.Hd_mets_map[Hd_ider]
+#     model_exch = iJR.exch_met_map[model_met]
+#     model_exchi = ChU.rxnindex(model, model_exch)
+#     # proj = DAT[method, :ep, :proj, Hd_ider, exp]
+#     # proj = ChLP.projection2D(model, objider, model_exchi; l = 50)
+#     l = 50
+#     ider1 = objider
+#     ider2 = model_exch
+#     @show ider2
+#     ider1_L, ider1_U = ChU.bounds(model, ider1)
+#     ider1_range = range(ider1_L, ider1_U; length = l)
+#     # ider2_L, ider2_U = ChU.bounds(model, ider2)
+#     # ider2_range = range(ider2_L, ider2_U; length = l)
+# end
+
 ## ----------------------------------------------------------------------------
 # proj 2D
 let

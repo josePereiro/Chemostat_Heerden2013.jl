@@ -73,7 +73,8 @@ let
         end
     end
 
-    @threads for thid in 1:nthreads()
+    # @threads 
+    for thid in 1:nthreads()
         for (exp, cGLC) in Ch
 
             ## -------------------------------------------------------------------
@@ -94,12 +95,14 @@ let
             # SetUp
             model_cache_id = (:MODEL0_CACHE, exp)
             # UJL.delete_cache(model_cache_id) # uncomment to reset
-            model = UJL.load_cache(model_cache_id; verbose = false) do
+            model =  UJL.load_cache(model_cache_id; verbose = true) do
                 BASE_MODELS = ChU.load_data(iJR.BASE_MODELS_FILE; verbose = false);
                 model_dict = BASE_MODELS["fva_models"][exp]
                 model0 = ChU.MetNet(;model_dict...) |> ChU.uncompressed_model
                 ChU.scale_polytope!(model0, 0.5)
-                return ChLP.fva_preprocess(model0; check_obj = iJR.BIOMASS_IDER)
+                return ChLP.fva_preprocess(model0; 
+                    verbose = false, check_obj = iJR.BIOMASS_IDER
+                )   
             end
             objidx = ChU.rxnindex(model, iJR.BIOMASS_IDER)
             M, N = size(model)
@@ -112,7 +115,6 @@ let
             epouts = ChU.load_cache(epouts_cid, Dict(); verbose = false)
             epout_cid = (:EPOUT_CACHE, exp)
             epout = ChU.load_cache(epout_cid; verbose = false)
-
             for movround in 1:1000
 
                 ## -------------------------------------------------------------------
@@ -131,20 +133,17 @@ let
                 ## -------------------------------------------------------------------
                 function upfun(beta)
         
-                    if haskey(epouts, beta) 
-                        epout = epouts[beta]
-                    else
-                        beta_vec[objidx] = beta
-                        epout = ChEP.maxent_ep(model; 
-                            beta_vec,
-                            alpha = Inf,
-                            maxiter = 5000,
-                            epsconv = 1e-3, 
-                            verbose = false, 
-                            solution = epout
-                        )
-                        epouts[beta] = epout
-                    end
+                    beta_vec[objidx] = beta
+                    epout = ChEP.maxent_ep(model; 
+                        beta_vec,
+                        alpha = Inf,
+                        maxiter = 5000,
+                        epsconv = 1e-3, 
+                        verbose = false, 
+                        solution = epout
+                    )
+                    epouts[beta] = epout
+                    
                     # ep_growth = ChU.av(epout)[objidx]
                     ep_growth = ChU.av(model, epout, iJR.BIOMASS_IDER)
         
@@ -237,7 +236,7 @@ let
     end # for thid in 1:nthreads()
 end
 
-# -------------------------------------------------------------------
+## -------------------------------------------------------------------
 # ME_Z_EXPECTED_G_BOUNDED and ME_Z_OPEN_G_OPEN
 let
     method = ME_Z_EXPECTED_G_BOUNDED
@@ -291,7 +290,7 @@ let
 
             upfrec_time = 10 # secunds
             last_uptime = time()
-            it = 1
+            gd_it = 1
 
             ## -------------------------------------------------------------------
             function upfun(beta)
@@ -303,7 +302,7 @@ let
                     epout = ChEP.maxent_ep(model; 
                         beta_vec,
                         alpha = Inf,
-                        damp = 0.985,
+                        damp = 0.9,
                         epsconv = 1e-4, 
                         verbose = false, 
                         solution = epout_seed,
@@ -314,19 +313,19 @@ let
                 epout_seed = epout
                 ep_growth = ChU.av(epout)[objidx]
 
-                update = it == 1 || abs(last_uptime - time()) > upfrec_time || 
+                update = gd_it == 1 || abs(last_uptime - time()) > upfrec_time || 
                     epout.status != ChEP.CONVERGED_STATUS
                 update && lock(WLOCK) do
                     diff = abs.(exp_growth - ep_growth)
                     @info(
                         "Grad descent... ", 
-                        exp, it, 
+                        exp, gd_it, 
                         epout.status, epout.iter, 
                         ep_growth, exp_growth, diff, 
                         beta,
                         thid
                     ); println()
-                    it += 1
+                    gd_it += 1
                     last_uptime = time()
                 end
                 return ep_growth

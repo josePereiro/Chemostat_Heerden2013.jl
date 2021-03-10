@@ -56,15 +56,15 @@ model = ChU.MetNet(mat_model; reshape = true);
 # to use it directly as base model
 partial_test(model)
 
-## -------------------------------------------------------------------
-# Gene intactivations
-# Heerden2013 describes some gene modifications
-# https://doi.org/10.1186/1475-2859-12-80. Table 2
-ChU.tagprintln_inmw("GENE MODIFICATIONS")
-for (name, ider) in iJR.Hd_to_inactivate_map
-    ChU.bounds!(model, ider, 0.0, 0.0)
-end
-partial_test(model)
+# ## -------------------------------------------------------------------
+# # Gene intactivations
+# # Heerden2013 describes some gene modifications
+# # https://doi.org/10.1186/1475-2859-12-80. Table 2
+# ChU.tagprintln_inmw("GENE MODIFICATIONS")
+# for (name, ider) in iJR.Hd_to_inactivate_map
+#     ChU.bounds!(model, ider, 0.0, 0.0)
+# end
+# partial_test(model)
 
 ## -------------------------------------------------------------------
 # Set bounds
