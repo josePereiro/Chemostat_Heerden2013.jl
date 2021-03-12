@@ -63,11 +63,9 @@ myminmax(a::Vector) = (minimum(a), maximum(a))
 CONC_IDERS = ["GLC", "SA", "AcA", "FA"]
 FLX_IDERS = ["GLC", "SA", "AcA", "FA"]
 
-EXPS = Hd.EXPS # experiments that have both concentration and flx data
-
 exp_colors = let
-    colors = Plots.distinguishable_colors(length(EXPS))
-    Dict(exp => color for (exp, color) in zip(EXPS, colors))
+    colors = Plots.distinguishable_colors(length(Hd.EXPS))
+    Dict(exp => color for (exp, color) in zip(Hd.EXPS, colors))
 end
 
 ider_colors = Dict(
@@ -85,8 +83,8 @@ method_colors = Dict(
 
 ALL_MODELS = [
     ME_Z_OPEN_G_OPEN, 
-    ME_Z_EXPECTED_G_BOUNDED, 
     ME_Z_FIXXED_G_BOUNDED, 
+    ME_Z_EXPECTED_G_BOUNDED, 
     ME_Z_EXPECTED_G_MOVING
 ]
 
@@ -106,9 +104,21 @@ let
     objider = iJR.BIOMASS_IDER
     DAT[:CONC_IDERS] = CONC_IDERS
     DAT[:FLX_IDERS] = FLX_IDERS
-    DAT[:EXPS] = EXPS
+    DAT[:EXPS] = []
 
-    for exp in Hd.EXPS, method in ALL_MODELS
+    # Find exps
+    for exp in Hd.EXPS
+        ok = false
+        for method in ALL_MODELS
+            ok = haskey(INDEX, method, :DFILE, exp) &&
+                INDEX[method, :DFILE, exp] != :unfeasible
+            !ok && break
+        end
+        !ok && continue
+        push!(DAT[:EXPS], exp)
+    end
+
+    for exp in DAT[:EXPS], method in ALL_MODELS
             
         datfile = INDEX[method, :DFILE, exp]
         dat = deserialize(datfile)
@@ -177,11 +187,14 @@ let
             DAT[method, :eperr, :conc, Hd_met, exp] = ep_std * exp_xi
         end
 
-    end # for exp in Hd.EXPS
+    end # for exp in EXPS
 
+    DAT[:EXPS] |> unique! |> sort!
+    
     # saving
     serialize(DATfile, DAT)
 end
+EXPS = DAT[:EXPS]
 
 ## ----------------------------------------------------------------------------
 # Inter project comunication
@@ -190,32 +203,6 @@ let
     CORR_DAT[:MAXENT_EP] = DAT
     ChU.save_data(iJR.CORR_DAT_FILE, CORR_DAT)
 end
-
-# ## ----------------------------------------------------------------------------
-# let
-#     exp = 3
-#     method = ME_Z_EXPECTED_G_MOVING
-#     Hd_ider = FLX_IDERS[1]
-#     objider = iJR.BIOMASS_IDER
-
-#     datfile = INDEX[method, :DFILE, exp]
-#     dat = deserialize(datfile)    
-#     model = dat[:model]
-
-#     model_met = iJR.Hd_mets_map[Hd_ider]
-#     model_exch = iJR.exch_met_map[model_met]
-#     model_exchi = ChU.rxnindex(model, model_exch)
-#     # proj = DAT[method, :ep, :proj, Hd_ider, exp]
-#     # proj = ChLP.projection2D(model, objider, model_exchi; l = 50)
-#     l = 50
-#     ider1 = objider
-#     ider2 = model_exch
-#     @show ider2
-#     ider1_L, ider1_U = ChU.bounds(model, ider1)
-#     ider1_range = range(ider1_L, ider1_U; length = l)
-#     # ider2_L, ider2_U = ChU.bounds(model, ider2)
-#     # ider2_range = range(ider2_L, ider2_U; length = l)
-# end
 
 ## ----------------------------------------------------------------------------
 # proj 2D
@@ -285,7 +272,7 @@ let
     method = ME_Z_EXPECTED_G_MOVING
     cGLC_plt = plot(;xlabel = "cGLC", ylabel = "beta")
     D_plt = plot(;xlabel = "D", ylabel = "beta")
-    for exp in Hd.EXPS 
+    for exp in EXPS 
         datfile = INDEX[method, :DFILE, exp]
         dat = deserialize(datfile)
         beta = dat[:exp_beta]
@@ -308,10 +295,10 @@ let
     for method in ALL_MODELS
         p = plot(title = string(iJR.PROJ_IDER, " method: ", method), 
             xlabel = "exp biom", ylabel = "model biom")
-        ep_vals = DAT[method, :ep, :flx, iJR.BIOMASS_IDER, Hd.EXPS]
-        eperr_vals = DAT[method, :eperr, :flx, iJR.BIOMASS_IDER, Hd.EXPS]
-        Hd_vals = DAT[method, :Hd, :flx, iJR.BIOMASS_IDER, Hd.EXPS]
-        color = [exp_colors[exp] for exp in Hd.EXPS]
+        ep_vals = DAT[method, :ep, :flx, iJR.BIOMASS_IDER, EXPS]
+        eperr_vals = DAT[method, :eperr, :flx, iJR.BIOMASS_IDER, EXPS]
+        Hd_vals = DAT[method, :Hd, :flx, iJR.BIOMASS_IDER, EXPS]
+        color = [exp_colors[exp] for exp in EXPS]
         m, M = myminmax([Hd_vals; ep_vals])
         margin = abs(M - m) * 0.1
         scatter!(p, Hd_vals, ep_vals; 
@@ -332,7 +319,7 @@ end
 let
     method = ME_Z_EXPECTED_G_MOVING
     p = plot(title = iJR.PROJ_IDER, xlabel = "beta", ylabel = "biom")
-    for exp in Hd.EXPS 
+    for exp in EXPS 
         datfile = INDEX[method, :DFILE, exp]
         dat = deserialize(datfile)
         model = dat[:model]
@@ -357,10 +344,10 @@ let
 
         ps = Plots.Plot[]
         for method in ALL_MODELS                                            
-            ep_vals = DAT[method, :ep, dat_prefix, iders, Hd.EXPS]
-            ep_errs = DAT[method, :eperr, dat_prefix, iders, Hd.EXPS]
-            Hd_vals = DAT[method, :Hd, dat_prefix, iders, Hd.EXPS]
-            color = [ider_colors[ider] for ider in iders, exp in Hd.EXPS]
+            ep_vals = DAT[method, :ep, dat_prefix, iders, EXPS]
+            ep_errs = DAT[method, :eperr, dat_prefix, iders, EXPS]
+            Hd_vals = DAT[method, :Hd, dat_prefix, iders, EXPS]
+            color = [ider_colors[ider] for ider in iders, exp in EXPS]
             
             diffsign = sign.(Hd_vals) .* sign.(ep_vals)
             Hd_vals = abs.(Hd_vals) .* diffsign
@@ -370,7 +357,7 @@ let
             scatter_params = (;label = "", color, ms = 7, alpha = 0.7)
             # ep corr
             p1 = plot(title = "$(iJR.PROJ_IDER) (EP) $method", 
-                ylabel = "model signdiff $(dat_prefix)", 
+                ylabel = "model signdiff $(dat_prefix)",
                 xlabel = "exp signdiff $(dat_prefix)",
             )
             scatter!(p1, Hd_vals, ep_vals; yerr = ep_errs, scatter_params...)
@@ -393,23 +380,23 @@ let
     ps = Plots.Plot[]
     for ider = FLX_IDERS
         p = plot(title = ider, xlabel = "replica", ylabel = "flx")
-        xticks =  (Hd.EXPS, string.(Hd.EXPS))
+        xticks =  (EXPS, string.(EXPS))
         
-        Hd_vals = DAT[:Hd, :flx, ider, Hd.EXPS]
-        plot!(p, Hd.EXPS, Hd_vals; 
+        Hd_vals = DAT[:Hd, :flx, ider, EXPS]
+        plot!(p, EXPS, Hd_vals; 
             label = "exp", color = :black, alpha = 0.8, lw = 3, xticks)
 
         for method in ALL_MODELS             
             color = method_colors[method]    
             
-            ep_vals = DAT[method, :ep, :flx, ider, Hd.EXPS]
-            plot!(p, Hd.EXPS, ep_vals; 
+            ep_vals = DAT[method, :ep, :flx, ider, EXPS]
+            plot!(p, EXPS, ep_vals; 
                 label = string(method), color, alpha = 0.5, lw = 5, ls = :dash, xticks)
             
-            fva_ranges = DAT[method, :fva, :flx, ider, Hd.EXPS]
-            plot!(p, Hd.EXPS, last.(fva_ranges);  
+            fva_ranges = DAT[method, :fva, :flx, ider, EXPS]
+            plot!(p, EXPS, last.(fva_ranges);  
                 label = "", color, alpha = 0.8, ls = :dot, lw = 3, xticks)
-            plot!(p, Hd.EXPS, first.(fva_ranges); 
+            plot!(p, EXPS, first.(fva_ranges); 
                 label = "", color, alpha = 0.8, ls = :dot, lw = 3, xticks)
         end
         push!(ps, p)
@@ -437,7 +424,7 @@ let
     for (model_ider, Hd_ider) in zip(model_iders, Hd_iders)
         ps = Plots.Plot[]
         ps2 = Plots.Plot[]
-        for exp in Hd.EXPS
+        for exp in EXPS
             p = plot(title = string(Hd_ider, " exp: ", exp))
             p2 = plot(title = string(Hd_ider, " exp: ", exp))
             margin, m, M = -Inf, Inf, -Inf
@@ -500,8 +487,8 @@ let
 
         for k in [:xi, :D, :sGLC]
             p = plot(;title = Hd_ider, size)
-            xticks =  (Hd.EXPS, string.(Hd.EXPS))
-            p = bar!(p, Hd.EXPS, Hd.val(k); title = k, label = "", xticks)
+            xticks =  (EXPS, string.(EXPS))
+            p = bar!(p, EXPS, Hd.val(k); title = k, label = "", xticks)
             push!(ps, p)
             push!(ps2, p)
         end
