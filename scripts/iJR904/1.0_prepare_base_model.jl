@@ -243,5 +243,56 @@ for (exp, cGLC) in enumerate(cGLCs)
 end
 
 ## -------------------------------------------------------------------
+# MAX MODEL
+let
+    # This model is bounded by the maximum rates found for EColi.
+    # Data From:
+    # Varma, (1993): 2465–73. https://doi.org/10.1128/AEM.59.8.2465-2473.1993.
+    # Extract max exchages from FIG 3 to form the maximum polytope
+
+    ChU.tagprintln_inmw("DOING MAX MODEL", 
+        "\n"
+    )
+
+    max_model = deepcopy(model)
+    
+    # Biomass
+    # 2.2 1/ h
+    ChU.bounds!(max_model, iJR.BIOMASS_IDER, 0.0, 2.2)
+    
+    Fd_exch_map = iJR.load_Fd_exch_map() 
+    # 40 mmol / gDW h
+    ChU.bounds!(max_model, Fd_exch_map["GLC"], -40.0, 0.0)
+    # 45 mmol/ gDW
+    ChU.bounds!(max_model, Fd_exch_map["AC"], 0.0, 40.0)
+    # 55 mmol/ gDW h
+    ChU.bounds!(max_model, Fd_exch_map["FORM"], 0.0, 55.0)
+    # 20 mmol/ gDW h
+    ChU.bounds!(max_model, Fd_exch_map["O2"], -20.0, 0.0)
+    
+    # fva
+    max_model = ChLP.fva_preprocess(max_model, 
+        check_obj = iJR.BIOMASS_IDER,
+        verbose = true
+    );
+
+    ## -------------------------------------------------------------------
+    for exp in 1:4
+        D = Fd.val(:D, exp)
+        cgD_X = Fd.cval(:GLC, exp) * Fd.val(:D, exp) / Fd.val(:X, exp)
+        ChU.lb!(max_model, iJR.GLC_EX_IDER, -cgD_X)
+        fbaout = ChLP.fba(max_model, iJR.BIOMASS_IDER, iJR.COST_IDER)
+        biom = ChU.av(max_model, fbaout, iJR.BIOMASS_IDER)
+        cost = ChU.av(max_model, fbaout, iJR.COST_IDER)
+        @info("Test", exp, cgD_X, D, biom, cost); println()
+    end
+    
+    ## -------------------------------------------------------------------
+    # saving
+    BASE_MODELS["max_model"] = ChU.compressed_model(max_model)
+    ChU.save_data(iJR.BASE_MODELS_FILE, BASE_MODELS);
+end;
+
+## -------------------------------------------------------------------
 # SAVING
 ChU.save_data(iJR.BASE_MODELS_FILE, BASE_MODELS);
