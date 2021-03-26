@@ -3,7 +3,7 @@
 
 ## ------------------------------------------------------------------
 CONT_CUL_DATA = DataFrame()
-MSD_METS = ["GLC", "SA", "AcA", "FA", "MA"]
+MSD_METS = ["GLC", "SUCC", "AC", "FORM", "MAL"]
 EXPS = 1:13
 
 # Interface
@@ -17,7 +17,7 @@ unit(id)::String = string(CONT_CUL_DATA[2, Symbol(id)])
 
 
 for preffix in ["u", "s", "c"]
-    fname = Symbol("$(preffix)val")
+    fname = Symbol(preffix, :val)
     @eval $fname(id, args...) = val(string($preffix, id), args...)
 end
 

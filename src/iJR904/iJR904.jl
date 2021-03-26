@@ -15,7 +15,6 @@ include("base_intake_info.jl")
 
 function __init__()
     _create_dirs()
-    _load_exch_met_map()
 end
 
 end

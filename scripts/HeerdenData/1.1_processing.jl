@@ -23,7 +23,7 @@ end
 ## -------------------------------------------------------------------
 # D vs X
 let
-    p = plot(; title = "Kayser", 
+    p = plot(; title = "Heerden", 
         xlabel = string("Xv (", Hd.unit(:DCW), ")"), 
         ylabel = string("D (", Hd.unit(:D), ")")
     )

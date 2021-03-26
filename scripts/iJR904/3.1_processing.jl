@@ -51,8 +51,8 @@ function mysavefig(p, pname; params...)
     @info "Plotting" fname
 end
 myminmax(a::Vector) = (minimum(a), maximum(a))  
-CONC_IDERS = ["GLC", "SA", "AcA", "FA"]
-FLX_IDERS = ["GLC", "SA", "AcA", "FA"]
+CONC_IDERS = ["GLC", "SUCC", "AC", "FORM"]
+FLX_IDERS = ["GLC", "SUCC", "AC", "FORM"]
 
 EXPS = Hd.EXPS 
 
@@ -62,8 +62,8 @@ exp_colors = let
 end
 
 ider_colors = Dict(
-    "GLC" => :red, "SA" => :yellow,
-    "AcA" => :orange, "FA" => :blue,
+    "GLC" => :red, "SUCC" => :yellow,
+    "AC" => :orange, "FORM" => :blue,
     "D" => :black,
 )
 
@@ -141,12 +141,12 @@ DAT[:CONC_IDERS] = CONC_IDERS
 DAT[:EXPS] = EXPS
 
 # -----------------------------------------------------------------------------------------------
-# ["GLC", "AcA", "FA"]
+# ["GLC", "AC", "FORM"]
 FLX_IDERS_MAP = Dict(
     "GLC" => "EX_glc_LPAREN_e_RPAREN__REV",
-    "AcA" => "EX_ac_LPAREN_e_RPAREN_",
-    "FA" => "EX_for_LPAREN_e_RPAREN_",
-    "SA" => "EX_succ_LPAREN_e_RPAREN_",
+    "AC" => "EX_ac_LPAREN_e_RPAREN_",
+    "FORM" => "EX_for_LPAREN_e_RPAREN_",
+    "SUCC" => "EX_succ_LPAREN_e_RPAREN_",
 )
 
 # Flx correlations

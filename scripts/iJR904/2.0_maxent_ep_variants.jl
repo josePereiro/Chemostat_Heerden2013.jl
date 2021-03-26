@@ -53,9 +53,38 @@ function base_model(exp)
     ChU.MetNet(;model_dict...) |> ChU.uncompressed_model
 end
 
+function load_model(exp::Int, modelkey::String = "fva_models")
+    BASE_MODELS = ChU.load_data(iJR.BASE_MODELS_FILE; verbose = false);
+    model_dict = BASE_MODELS[modelkey][exp]
+    ChU.MetNet(;model_dict...) |> ChU.uncompressed_model
+end
+
+function load_model(modelkey::String = "max_model")
+    BASE_MODELS = ChU.load_data(iJR.BASE_MODELS_FILE; verbose = false);
+    model_dict = BASE_MODELS[modelkey]
+    ChU.MetNet(;model_dict...) |> ChU.uncompressed_model
+end
+
+## -------------------------------------------------------------------
+function check_cache(datfile, exp, method)
+    thid = threadid()
+    if isfile(datfile)
+        lock(WLOCK) do
+            INDEX[method, :DFILE, exp] = datfile
+            @info("Cached loaded (skipping)",
+                exp, datfile, thid
+            )
+            println()
+        end
+        return true
+    end
+    return false
+end
+
 # -------------------------------------------------------------------
 # METHOD VARIANTS
 const ME_Z_OPEN_G_OPEN          = :ME_Z_OPEN_G_OPEN           # Do not use extra constraints
+const ME_MAX_POL                = :ME_MAX_POL                 # 
 const ME_Z_EXPECTED_G_BOUNDED   = :ME_Z_EXPECTED_G_BOUNDED    # Match ME and Dy biom average and constraint av_ug
 const ME_Z_EXPECTED_G_MOVING    = :ME_Z_EXPECTED_G_MOVING     # 
 const ME_Z_FIXXED_G_BOUNDED     = :ME_Z_FIXXED_G_BOUNDED      # Fix biom around observed
@@ -76,6 +105,10 @@ include("2.0.3_ME_Z_FIXXED_G_BOUNDED.jl")
 # ME_Z_OPEN_G_OPEN
 # It was computed in ME_Z_EXPECTED_G_BOUNDED
 include("2.0.4_ME_Z_OPEN_G_OPEN.jl")
+
+## -------------------------------------------------------------------
+# ME_MAX_POL
+include("2.0.5_ME_MAX_POL.jl")
 
 ## -------------------------------------------------------------------
 # SAVE INDEX

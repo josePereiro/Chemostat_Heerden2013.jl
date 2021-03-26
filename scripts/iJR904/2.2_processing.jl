@@ -60,8 +60,8 @@ function mysavefig(p, pname; params...)
     @info "Plotting" fname
 end
 myminmax(a::Vector) = (minimum(a), maximum(a))
-CONC_IDERS = ["GLC", "SA", "AcA", "FA"]
-FLX_IDERS = ["GLC", "SA", "AcA", "FA"]
+CONC_IDERS = ["GLC", "SUCC", "AC", "FORM"]
+FLX_IDERS = ["GLC", "SUCC", "AC", "FORM"]
 
 exp_colors = let
     colors = Plots.distinguishable_colors(length(Hd.EXPS))
@@ -69,8 +69,8 @@ exp_colors = let
 end
 
 ider_colors = Dict(
-    "GLC" => :red, "SA" => :yellow,
-    "AcA" => :orange, "FA" => :blue,
+    "GLC" => :red, "SUCC" => :yellow,
+    "AC" => :orange, "FORM" => :blue,
     "D" => :black,
 )
 

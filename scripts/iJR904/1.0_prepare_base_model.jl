@@ -167,7 +167,10 @@ ChU.tagprintln_inmw("SETTING EXCHANGES")
 # base_intake_info (The minimum medium) will be opened.
 # The base model will be constraint as in a cultivation with xi = 1.0
 # see Cossios paper (see README)
-let ξ = 1.0 
+let 
+    ξ = 1.0 
+    base_intake_info = iJR.load_base_intake_info()
+
     # println("Minimum medium: ", iJR.base_intake_info)
     foreach(exchs) do idx
         ChU.ub!(model, idx, iJR.MAX_ABS_BOUND) # Opening all outakes
@@ -175,7 +178,7 @@ let ξ = 1.0
     end
 
     # see Cossios paper (see README) for details in the Chemostat bound constraint
-    ChSS.apply_bound!(model, ξ, iJR.base_intake_info);
+    ChSS.apply_bound!(model, ξ, base_intake_info);
     # tot_cost is the exchange that controls the bounds of the 
     # enzimatic cost contraint, we bound it to [0, 1.0]
     ChU.lb!(model, cost_exch_id, 0.0);
@@ -197,50 +200,50 @@ end;
 # saving
 ChU.save_data(iJR.EXCH_MET_MAP_FILE, exch_met_map)
 
-
+## -------------------------------------------------------------------
 # FVA PREPROCESSING
 compressed(model) = model |> ChU.struct_to_dict |> ChU.compressed_copy
 const BASE_MODELS = isfile(iJR.BASE_MODELS_FILE) ? 
     ChU.load_data(iJR.BASE_MODELS_FILE) : 
     Dict("base_model" => compressed(model))
 cGLCs = Hd.val("cGLC")
-for (exp, cGLC) in enumerate(cGLCs)
+# for (exp, cGLC) in enumerate(cGLCs)
 
-    D = get!(BASE_MODELS, "fva_models", Dict())
-    ChU.tagprintln_inmw("DOING FVA", 
-        "\nexp:             ", exp,
-        "\ncGLC:            ", cGLC,
-        "\ncProgress:       ", length(D),
-        "\n"
-    )
-    haskey(D, exp) && continue # cached
+#     D = get!(BASE_MODELS, "fva_models", Dict())
+#     ChU.tagprintln_inmw("DOING FVA", 
+#         "\nexp:             ", exp,
+#         "\ncGLC:            ", cGLC,
+#         "\ncProgress:       ", length(D),
+#         "\n"
+#     )
+#     haskey(D, exp) && continue # cached
 
-    ## -------------------------------------------------------------------
-    # prepare model
-    model0 = deepcopy(model)
-    intake_info = deepcopy(iJR.base_intake_info)
-    # The only difference between experiments is the feed medium 
-    # concentration.
-    ξ = Hd.val("xi", exp)
-    intake_info[iJR.EX_GLC_IDER]["c"] = cGLC
-    ChSS.apply_bound!(model0, ξ, intake_info; 
-        emptyfirst = true, ignore_miss = true
-    )
+#     ## -------------------------------------------------------------------
+#     # prepare model
+#     model0 = deepcopy(model)
+#     intake_info = iJR.load_base_intake_info()
+#     # The only difference between experiments is the feed medium 
+#     # concentration.
+#     ξ = Hd.val("xi", exp)
+#     intake_info[iJR.EX_GLC_IDER]["c"] = cGLC
+#     ChSS.apply_bound!(model0, ξ, intake_info; 
+#         emptyfirst = true, ignore_miss = true
+#     )
         
-    ## -------------------------------------------------------------------
-    # fva
-    partial_test(model0)
-    fva_model = ChLP.fva_preprocess(model0, 
-        batchlen = 50,
-        check_obj = iJR.BIOMASS_IDER,
-        verbose = true
-    )
-    partial_test(fva_model)
+#     ## -------------------------------------------------------------------
+#     # fva
+#     partial_test(model0)
+#     fva_model = ChLP.fva_preprocess(model0, 
+#         batchlen = 50,
+#         check_obj = iJR.BIOMASS_IDER,
+#         verbose = true
+#     )
+#     partial_test(fva_model)
 
-    # storing
-    D[exp] = compressed(fva_model)
+#     # storing
+#     D[exp] = compressed(fva_model)
     
-end
+# end
 
 ## -------------------------------------------------------------------
 # MAX MODEL
@@ -260,15 +263,15 @@ let
     # 2.2 1/ h
     ChU.bounds!(max_model, iJR.BIOMASS_IDER, 0.0, 2.2)
     
-    Fd_exch_map = iJR.load_Fd_exch_map() 
+    Hd_rxns_map = iJR.load_Hd_rxns_map() 
     # 40 mmol / gDW h
-    ChU.bounds!(max_model, Fd_exch_map["GLC"], -40.0, 0.0)
+    ChU.bounds!(max_model, Hd_rxns_map["GLC"], -40.0, 0.0)
     # 45 mmol/ gDW
-    ChU.bounds!(max_model, Fd_exch_map["AC"], 0.0, 40.0)
+    ChU.bounds!(max_model, Hd_rxns_map["AC"], 0.0, 40.0)
     # 55 mmol/ gDW h
-    ChU.bounds!(max_model, Fd_exch_map["FORM"], 0.0, 55.0)
+    ChU.bounds!(max_model, Hd_rxns_map["FORM"], 0.0, 55.0)
     # 20 mmol/ gDW h
-    ChU.bounds!(max_model, Fd_exch_map["O2"], -20.0, 0.0)
+    ChU.bounds!(max_model, Hd_rxns_map["O2"], -20.0, 0.0)
     
     # fva
     max_model = ChLP.fva_preprocess(max_model, 
@@ -277,20 +280,19 @@ let
     );
 
     ## -------------------------------------------------------------------
-    for exp in 1:4
-        D = Fd.val(:D, exp)
-        cgD_X = Fd.cval(:GLC, exp) * Fd.val(:D, exp) / Fd.val(:X, exp)
-        ChU.lb!(max_model, iJR.GLC_EX_IDER, -cgD_X)
-        fbaout = ChLP.fba(max_model, iJR.BIOMASS_IDER, iJR.COST_IDER)
-        biom = ChU.av(max_model, fbaout, iJR.BIOMASS_IDER)
-        cost = ChU.av(max_model, fbaout, iJR.COST_IDER)
+    test_model = deepcopy(max_model)
+    for (exp, D) in Hd.val(:D) |> enumerate
+        cgD_X = Hd.cval(:GLC, exp) * Hd.val(:D, exp) / Hd.val(:DCW, exp)
+        ChU.lb!(test_model, iJR.EX_GLC_IDER, -cgD_X)
+        fbaout = ChLP.fba(test_model, iJR.BIOMASS_IDER, iJR.COST_IDER)
+        biom = ChU.av(test_model, fbaout, iJR.BIOMASS_IDER)
+        cost = ChU.av(test_model, fbaout, iJR.COST_IDER)
         @info("Test", exp, cgD_X, D, biom, cost); println()
     end
     
     ## -------------------------------------------------------------------
     # saving
-    BASE_MODELS["max_model"] = ChU.compressed_model(max_model)
-    ChU.save_data(iJR.BASE_MODELS_FILE, BASE_MODELS);
+    BASE_MODELS["max_model"] = compressed(max_model)
 end;
 
 ## -------------------------------------------------------------------

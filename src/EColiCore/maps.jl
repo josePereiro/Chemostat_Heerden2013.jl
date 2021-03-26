@@ -10,10 +10,10 @@ const Hd_mets_map = Dict();
 function _set_Hd_mets_map()
     empty!(Hd_mets_map)
     Hd_mets_map["GLC"] = "glc__D_e";
-    Hd_mets_map["SA"] = "succ_e";
-    Hd_mets_map["AcA"] = "ac_e";
-    Hd_mets_map["FA"] = "for_e";
-    Hd_mets_map["MA"] = "mal__L_e";
+    Hd_mets_map["SUCC"] = "succ_e";
+    Hd_mets_map["AC"] = "ac_e";
+    Hd_mets_map["FORM"] = "for_e";
+    Hd_mets_map["MAL"] = "mal__L_e";
     for (k, v) in Hd_mets_map
         Hd_mets_map[v] = k
     end

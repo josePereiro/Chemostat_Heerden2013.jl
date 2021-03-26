@@ -1,6 +1,6 @@
 # Table 2 Steady state results from continuous fermentations
 # This data was hand copied from Heerden2013 https://doi.org/10.1186/1475-2859-12-80
-D	cGLC	sGLC	sSA	sAcA	sFA	sMA	DCW	MB	SA/AcA	Ysp	Ysx	P
+D	cGLC	sGLC	sSUCC	sAC	sFORM	sMAL	DCW	MB	SUCC/AC	Ysp	Ysx	P
 Dilution Rate	Glucose conc feed	Glucose conc effluent	Succinic Acid conc effluent	Acetic acid conc effluent	Formic acid conc effluent	Malic acid conc effluent	Dry cell weight	Mass_balance	Yield succinic acid, acetic acid	Succinic acid yield	Cell yield	Productivity
 1/ hr	g/ L	g/ L	g/ L	g/ L	g/ L	g/ L	g/ L	unitless	mol/ mol	g/ g	g/ g	g/ L g
 0.056	19.0	2.2	12.9	2.9	0.3	0	nan	nan	2.3	0.77	nan	0.72
