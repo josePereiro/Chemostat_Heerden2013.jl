@@ -10,8 +10,8 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
     # package, then you must activate the package enviroment (see README)
     import Chemostat_Heerden2013
     const ChHd = Chemostat_Heerden2013
-    const Hd  = ChHd.HeerdenData;
-    const BD  = ChHd.BegData;
+    const Hd  = ChHd.HeerdenData
+    const BD  = ChHd.BegData
     const iJR = ChHd.iJR904
 
     #  ----------------------------------------------------------------------------
@@ -41,10 +41,10 @@ end
 ## -----------------------------------------------------------------------------------------------
 LPDAT = ChU.load_data(iJR.LP_DAT_FILE)
 
-const FBA_MIN_COST = :FBA_MIN_COST
-const FBA_OPEN = :FBA_OPEN
-const YIELD = :YIELD
-const FBA_MAX_VG_YIELD = :FBA_MAX_VG_YIELD
+const FBA_Z_FIX_MIN_COST = :FBA_Z_FIX_MIN_COST
+const FBA_MAX_BIOM_MIN_COST = :FBA_MAX_BIOM_MIN_COST
+const FBA_Z_FIX_MIN_VG_COST = :FBA_Z_FIX_MIN_VG_COST
+const FBA_Z_VG_FIX_MIN_COST = :FBA_Z_VG_FIX_MIN_COST
 
 ## -----------------------------------------------------------------------------------------------
 fileid = "3.1"
@@ -53,7 +53,6 @@ function mysavefig(p, pname; params...)
     @info "Plotting" fname
 end
 myminmax(a::Vector) = (minimum(a), maximum(a))  
-CONC_IDERS = ["GLC", "SUCC", "AC", "FORM"]
 FLX_IDERS = ["GLC", "SUCC", "AC", "FORM"]
 
 EXPS = Hd.EXPS 
@@ -70,15 +69,17 @@ ider_colors = Dict(
 )
 
 method_colors = Dict(
-    FBA_OPEN => :red,
-    FBA_MIN_COST => :orange,
-    YIELD => :blue,
+    FBA_Z_FIX_MIN_COST => :red,
+    FBA_MAX_BIOM_MIN_COST => :orange,
+    FBA_Z_FIX_MIN_VG_COST => :blue,
+    FBA_Z_VG_FIX_MIN_COST => :purple,
 )
 
 ALL_METHODS = [
-    FBA_MAX_VG_YIELD,
-    FBA_MIN_COST, 
-    FBA_OPEN
+    FBA_Z_FIX_MIN_COST,
+    FBA_MAX_BIOM_MIN_COST, 
+    FBA_Z_FIX_MIN_VG_COST,
+    FBA_Z_VG_FIX_MIN_COST
 ]
 
 Hd_mets_map = iJR.load_Hd_mets_map()
@@ -88,7 +89,6 @@ Hd_rxns_map = iJR.load_Hd_rxns_map()
 # correlations
 DAT = UJL.DictTree()
 DAT[:FLX_IDERS] = FLX_IDERS
-DAT[:CONC_IDERS] = CONC_IDERS
 DAT[:EXPS] = EXPS
 
 ## -----------------------------------------------------------------------------------------------
@@ -124,8 +124,7 @@ let
     end
     
     pname = "flx_tot_corr"
-    layout = (1, 3)
-    mysavefig(ps, pname; layout)
+    mysavefig(ps, pname)
 
 end
 
@@ -135,24 +134,6 @@ let
     CORR_DAT = isfile(iJR.CORR_DAT_FILE) ? ChU.load_data(iJR.CORR_DAT_FILE) : Dict()
     CORR_DAT[:LP] = DAT
     ChU.save_data(iJR.CORR_DAT_FILE, CORR_DAT)
-end
-
-## -------------------------------------------------------------------
-# join flx correlations
-let
-
-    figdir = iJR.MODEL_FIGURES_DIR
-    for (lp_p, ep_p, join_name) in [
-        ("3.1_flx_tot_corr.png", "2.1_flx_tot_corr.png", "flx_join_corr.png"),
-        ("3.1_conc_tot_corr.png", "2.1_conc_tot_corr.png", "conc_join_corr.png"),
-    ] 
-        lp_img = FileIO.load(joinpath(figdir, lp_p))
-        ep_img = FileIO.load(joinpath(figdir, ep_p))
-        join_p = UJL.make_grid([lp_img, ep_img])
-        fname = joinpath(figdir, join_name)
-        FileIO.save(fname, join_p)
-        @info "Plotting" fname
-    end
 end
 
 ## -------------------------------------------------------------------

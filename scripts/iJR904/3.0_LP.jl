@@ -21,10 +21,7 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
     import Chemostat.LP.MathProgBase
     const Ch = Chemostat
     const ChU = Ch.Utils
-    const ChSS = Ch.SteadyState
     const ChLP = Ch.LP
-    const ChEP = Ch.MaxEntEP
-    const ChSU = Ch.SimulationUtils
 
     import JuMP, GLPK
     using Serialization
@@ -33,10 +30,10 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
 end
 
 ## -----------------------------------------------------------------------------------------------
-const FBA_MIN_COST = :FBA_MIN_COST
-const FBA_OPEN = :FBA_OPEN
-const YIELD = :YIELD
-const FBA_MAX_VG_YIELD = :FBA_MAX_VG_YIELD
+const FBA_Z_FIX_MIN_COST    = :FBA_Z_FIX_MIN_COST
+const FBA_MAX_BIOM_MIN_COST = :FBA_MAX_BIOM_MIN_COST
+const FBA_Z_FIX_MIN_VG_COST = :FBA_Z_FIX_MIN_VG_COST
+const FBA_Z_VG_FIX_MIN_COST = :FBA_Z_VG_FIX_MIN_COST
 const EXPS = 1:13
 
 ## -----------------------------------------------------------------------------------------------
@@ -50,13 +47,68 @@ end
 # Data container
 LPDAT = UJL.DictTree()
 
-## -----------------------------------------------------------------------------------------------
-# YIELD
-include("3.0.1_YIELD.jl")
-
 ## -------------------------------------------------------------------
 # FBA
-include("3.0.2_FBA.jl")
+let
+    objider = iJR.BIOMASS_IDER
+    costider = iJR.COST_IDER
+    exglcider = iJR.EX_GLC_IDER
+    max_sense = -1.0
+    min_sense = 1.0
+
+    iterator = Hd.val(:D) |> enumerate |> collect 
+    for (exp, D) in iterator
+
+        @info("Doing ", exp); println()
+
+        # FBA_MAX_BIOM_MIN_COST
+        let
+            model = base_model(exp)
+            fbaout = ChLP.fba(model, objider, costider)
+            
+            LPDAT[FBA_MAX_BIOM_MIN_COST, :model, exp] = model
+            LPDAT[FBA_MAX_BIOM_MIN_COST, :fbaout, exp] = fbaout
+        end
+
+        # FBA_Z_FIX_MIN_COST
+        let
+            model = base_model(exp)
+            exp_growth = Hd.val("D", exp)
+            ChU.bounds!(model, objider, exp_growth, exp_growth)
+            fbaout = ChLP.fba(model, objider, costider)
+
+            LPDAT[FBA_Z_FIX_MIN_COST, :model, exp] = model
+            LPDAT[FBA_Z_FIX_MIN_COST, :fbaout, exp] = fbaout
+        end
+
+        # FBA_Z_FIX_MIN_VG_COST
+        let
+            model = base_model(exp)
+            exp_growth = Hd.val("D", exp)
+            ChU.bounds!(model, objider, exp_growth, exp_growth)
+            fbaout1 = ChLP.fba(model, exglcider; sense = max_sense)
+            exglc = ChU.av(model, fbaout1, exglcider)
+            ChU.bounds!(model, exglcider, exglc, exglc)
+            fbaout = ChLP.fba(model, costider; sense = min_sense)
+
+            LPDAT[FBA_Z_FIX_MIN_VG_COST, :model, exp] = model
+            LPDAT[FBA_Z_FIX_MIN_VG_COST, :fbaout, exp] = fbaout
+        end
+
+        # FBA_Z_VG_FIX_MIN_COST
+        let
+            model = base_model(exp)
+            exp_growth = Hd.val("D", exp)
+            ChU.bounds!(model, objider, exp_growth, exp_growth)
+            exp_exglc = Hd.uval("GLC", exp)
+            ChU.bounds!(model, exglcider, exp_exglc, exp_exglc)
+            fbaout = ChLP.fba(model, costider; sense = min_sense)
+
+            LPDAT[FBA_Z_VG_FIX_MIN_COST, :model, exp] = model
+            LPDAT[FBA_Z_VG_FIX_MIN_COST, :fbaout, exp] = fbaout
+        end
+    end
+end
 
 ## -------------------------------------------------------------------
 ChU.save_data(iJR.LP_DAT_FILE, LPDAT)
