@@ -30,7 +30,7 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
 
     import UtilsJL
     const UJL = UtilsJL
-    UJL.set_cache_dir(iJR.CACHE_DIR)
+    UJL.set_cache_dir(iJR.MODEL_CACHE_DIR)
     
 end
 
@@ -47,17 +47,12 @@ function dat_file(name; kwargs...)
 end
 
 # -------------------------------------------------------------------
-function base_model(exp)
-    BASE_MODELS = ChU.load_data(iJR.BASE_MODELS_FILE; verbose = false);
-    model_dict = BASE_MODELS["fva_models"][exp]
-    ChU.MetNet(;model_dict...) |> ChU.uncompressed_model
-end
-
 function load_model(exp::Int, modelkey::String = "fva_models")
     BASE_MODELS = ChU.load_data(iJR.BASE_MODELS_FILE; verbose = false);
     model_dict = BASE_MODELS[modelkey][exp]
     ChU.MetNet(;model_dict...) |> ChU.uncompressed_model
 end
+base_model(exp) = load_model(exp, "fva_models")
 
 function load_model(modelkey::String = "max_model")
     BASE_MODELS = ChU.load_data(iJR.BASE_MODELS_FILE; verbose = false);
@@ -89,22 +84,22 @@ const ME_Z_EXPECTED_G_BOUNDED   = :ME_Z_EXPECTED_G_BOUNDED    # Match ME and Dy 
 const ME_Z_EXPECTED_G_MOVING    = :ME_Z_EXPECTED_G_MOVING     # 
 const ME_Z_FIXXED_G_BOUNDED     = :ME_Z_FIXXED_G_BOUNDED      # Fix biom around observed
 
-## -------------------------------------------------------------------
-# ME_Z_EXPECTED_G_MOVING
-include("2.0.1_ME_Z_EXPECTED_G_MOVING.jl")
+# ## -------------------------------------------------------------------
+# # ME_Z_EXPECTED_G_MOVING
+# include("2.0.1_ME_Z_EXPECTED_G_MOVING.jl")
 
-## -------------------------------------------------------------------
-# ME_Z_EXPECTED_G_BOUNDED
-include("2.0.2_ME_Z_EXPECTED_G_BOUNDED.jl")
+# ## -------------------------------------------------------------------
+# # ME_Z_EXPECTED_G_BOUNDED
+# include("2.0.2_ME_Z_EXPECTED_G_BOUNDED.jl")
 
-## -------------------------------------------------------------------
-# ME_Z_FIXXED_G_BOUNDED
-include("2.0.3_ME_Z_FIXXED_G_BOUNDED.jl")
+# ## -------------------------------------------------------------------
+# # ME_Z_FIXXED_G_BOUNDED
+# include("2.0.3_ME_Z_FIXXED_G_BOUNDED.jl")
 
-## -------------------------------------------------------------------
-# ME_Z_OPEN_G_OPEN
-# It was computed in ME_Z_EXPECTED_G_BOUNDED
-include("2.0.4_ME_Z_OPEN_G_OPEN.jl")
+# ## -------------------------------------------------------------------
+# # ME_Z_OPEN_G_OPEN
+# # It was computed in ME_Z_EXPECTED_G_BOUNDED
+# include("2.0.4_ME_Z_OPEN_G_OPEN.jl")
 
 ## -------------------------------------------------------------------
 # ME_MAX_POL

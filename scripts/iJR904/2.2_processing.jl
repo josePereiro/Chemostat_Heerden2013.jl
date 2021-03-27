@@ -41,7 +41,6 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
     using Plots, FileIO
     import GR
     GR.inline("png")
-
 end
 
 ## ----------------------------------------------------------------------------
@@ -49,6 +48,7 @@ INDEX = ChU.load_data(iJR.MAXENT_VARIANTS_INDEX_FILE; verbose = false);
 
 # -------------------------------------------------------------------
 const ME_Z_OPEN_G_OPEN          = :ME_Z_OPEN_G_OPEN           # Do not use extra constraints
+const ME_MAX_POL                = :ME_MAX_POL                 # Match ME and Dy biom average and constraint av_ug
 const ME_Z_EXPECTED_G_BOUNDED   = :ME_Z_EXPECTED_G_BOUNDED    # Match ME and Dy biom average and constraint av_ug
 const ME_Z_EXPECTED_G_MOVING    = :ME_Z_EXPECTED_G_MOVING     # 
 const ME_Z_FIXXED_G_BOUNDED     = :ME_Z_FIXXED_G_BOUNDED      # Fix biom around observed
@@ -62,10 +62,9 @@ end
 myminmax(a::Vector) = (minimum(a), maximum(a))
 CONC_IDERS = ["GLC", "SUCC", "AC", "FORM"]
 FLX_IDERS = ["GLC", "SUCC", "AC", "FORM"]
-
 exp_colors = let
-    colors = Plots.distinguishable_colors(length(Hd.EXPS))
-    Dict(exp => color for (exp, color) in zip(Hd.EXPS, colors))
+    colors = Plots.distinguishable_colors(length(EXPS))
+    Dict(exp => color for (exp, color) in zip(EXPS, colors))
 end
 
 ider_colors = Dict(
@@ -76,17 +75,39 @@ ider_colors = Dict(
 
 method_colors = Dict(
     ME_Z_OPEN_G_OPEN => :red,
-    ME_Z_FIXXED_G_BOUNDED => :orange,
-    ME_Z_EXPECTED_G_BOUNDED => :blue,
-    ME_Z_EXPECTED_G_MOVING => :green,
+    ME_MAX_POL => :blue,
+    ME_Z_EXPECTED_G_BOUNDED => :orange,
+    ME_Z_EXPECTED_G_MOVING => :purple,
+    ME_Z_FIXXED_G_BOUNDED => :green,
 )
 
 ALL_METHODS = [
-    ME_Z_OPEN_G_OPEN, 
-    ME_Z_FIXXED_G_BOUNDED, 
-    ME_Z_EXPECTED_G_BOUNDED, 
-    ME_Z_EXPECTED_G_MOVING
+    # ME_Z_OPEN_G_OPEN, 
+    ME_MAX_POL, 
+    # ME_Z_FIXXED_G_BOUNDED, 
+    # ME_Z_EXPECTED_G_BOUNDED, 
+    # ME_Z_EXPECTED_G_MOVING
 ]
+
+Hd_rxns_map = iJR.load_Hd_rxns_map()
+Hd_mets_map = iJR.load_Hd_mets_map()
+
+## ----------------------------------------------------------------------------
+# let
+#     method = ME_MAX_POL
+#     for exp in Hd.EXPS
+#         datfile = INDEX[method, :DFILE, exp]
+#         dat = deserialize(datfile)
+#         exp_beta = dat[:exp_beta] 
+#         epouts = dat[:epouts] 
+#         kas_betakey = haskey(epouts, exp_beta)
+#         @info("Checking", exp, kas_betakey, exp_beta, keys(epouts))
+#         if !kas_betakey
+#             dat[:exp_beta] = last(collect(keys(epouts)))
+#             serialize(datfile, dat)
+#         end
+#     end
+# end
 
 ## ----------------------------------------------------------------------------
 # Collect
@@ -151,8 +172,8 @@ let
         # mets
         for Hd_met in FLX_IDERS
 
-                model_met = iJR.Hd_mets_map[Hd_met]
-                model_exch = iJR.exch_met_map[model_met]
+                model_met = Hd_mets_map[Hd_met]
+                model_exch = Hd_rxns_map[Hd_met]
                 model_exchi = ChU.rxnindex(model, model_exch)
 
                 # fuxes
@@ -194,7 +215,28 @@ let
     # saving
     serialize(DATfile, DAT)
 end
+
+## ----------------------------------------------------------------------------
 EXPS = DAT[:EXPS]
+
+exp_colors = let
+    colors = Plots.distinguishable_colors(length(EXPS))
+    Dict(exp => color for (exp, color) in zip(EXPS, colors))
+end
+
+ider_colors = Dict(
+    "GLC" => :red, "SUCC" => :yellow,
+    "AC" => :orange, "FORM" => :blue,
+    "D" => :black,
+)
+
+method_colors = Dict(
+    ME_Z_OPEN_G_OPEN => :red,
+    ME_MAX_POL => :blue,
+    ME_Z_EXPECTED_G_BOUNDED => :orange,
+    ME_Z_EXPECTED_G_MOVING => :purple,
+    ME_Z_FIXXED_G_BOUNDED => :green,
+)
 
 ## ----------------------------------------------------------------------------
 # Inter project comunication
@@ -325,7 +367,7 @@ end
 ## ----------------------------------------------------------------------------
 # proj 2D
 let
-    method = ME_Z_EXPECTED_G_MOVING
+    method = ME_MAX_POL
     biom_ider = iJR.BIOMASS_IDER
 
     ps_pool = Dict()
@@ -416,12 +458,11 @@ let
         ep_vals = DAT[method, :ep, :flx, iJR.BIOMASS_IDER, EXPS]
         eperr_vals = DAT[method, :eperr, :flx, iJR.BIOMASS_IDER, EXPS]
         Hd_vals = DAT[method, :Hd, :flx, iJR.BIOMASS_IDER, EXPS]
-        color = [exp_colors[exp] for exp in EXPS]
         m, M = myminmax([Hd_vals; ep_vals])
         margin = abs(M - m) * 0.1
         scatter!(p, Hd_vals, ep_vals; 
             yerr = eperr_vals,
-            label = "", color,
+            label = "", color = :black,
             alpha = 0.7, ms = 7,
             xlim = [m - margin, M + margin],
             ylim = [m - margin, M + margin],
@@ -529,12 +570,13 @@ end
 let 
     objider = iJR.BIOMASS_IDER
     size = [300, 250]
+    method2 = ME_MAX_POL
 
     # Iders
     model_iders, Hd_iders = [iJR.BIOMASS_IDER], ["D"]
     for Hd_met in CONC_IDERS
-        model_met = iJR.Hd_mets_map[Hd_met]
-        model_exch = iJR.exch_met_map[model_met]
+        model_met = Hd_mets_map[Hd_met]
+        model_exch = Hd_rxns_map[Hd_met]
         push!(model_iders, model_exch)
         push!(Hd_iders, string("u", Hd_met))
     end
@@ -549,7 +591,7 @@ let
             Hd_av = Hd.val(Hd_ider, exp)
             
             # EP
-            for method in [ME_Z_FIXXED_G_BOUNDED, ME_Z_EXPECTED_G_BOUNDED, ME_Z_OPEN_G_OPEN]
+            for method in ALL_METHODS
                 color = method_colors[method]    
 
                 datfile = INDEX[method, :DFILE, exp]
@@ -571,7 +613,7 @@ let
                 M = maximum([M, ep_av, Hd_av])
                 margin = maximum([margin, 3 * ep_va])
 
-                if method == ME_Z_EXPECTED_G_BOUNDED
+                if method == method2
                     for (beta, epout) in sort(epouts; by = first)
                         ep_av = ChU.av(model, epout, model_ider)
                         ep_va = sqrt(ChU.va(model, epout, model_ider))
@@ -628,8 +670,8 @@ let
     # Iders
     model_iders, Hd_iders = [iJR.BIOMASS_IDER], ["D"]
     for Hd_met in CONC_IDERS
-        model_met = iJR.Hd_mets_map[Hd_met]
-        model_exch = iJR.exch_met_map[model_met]
+        model_met = Hd_mets_map[Hd_met]
+        model_exch = Hd_rxns_map[Hd_met]
         push!(model_iders, model_exch)
         push!(Hd_iders, string("u", Hd_met))
     end
@@ -639,7 +681,7 @@ let
 
         epps = Plots.Plot[]
         exps = Plots.Plot[]
-        for method in [ME_Z_FIXXED_G_BOUNDED, ME_Z_EXPECTED_G_BOUNDED, ME_Z_OPEN_G_OPEN]
+        for method in ALL_METHODS
             expp = plot(;title = string("Experimental"), marg_params...)
             epp = plot(;title = string(" MaxEnt: \n", method), marg_params...)
             margin, m, M = -Inf, Inf, -Inf

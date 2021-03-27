@@ -201,49 +201,68 @@ end;
 ChU.save_data(iJR.EXCH_MET_MAP_FILE, exch_met_map)
 
 ## -------------------------------------------------------------------
+function scale_model(model, scale_factor)
+    base_nzabs_range = ChU.nzabs_range(model.S)
+    base_size = size(model)
+    
+    # Scale model (reduce S ill-condition)
+    model = ChU.well_scaled_model(model, scale_factor)
+    
+    scl_size = size(model)
+    scl_nzabs_range = ChU.nzabs_range(model.S)
+
+    @info("Model", exp, 
+        base_size, base_nzabs_range, 
+        scl_size, scl_nzabs_range
+    ); println()
+    return model
+end
+
+## -------------------------------------------------------------------
 # FVA PREPROCESSING
 compressed(model) = model |> ChU.struct_to_dict |> ChU.compressed_copy
 const BASE_MODELS = isfile(iJR.BASE_MODELS_FILE) ? 
     ChU.load_data(iJR.BASE_MODELS_FILE) : 
     Dict("base_model" => compressed(model))
 cGLCs = Hd.val("cGLC")
-# for (exp, cGLC) in enumerate(cGLCs)
+for (exp, cGLC) in enumerate(cGLCs)
 
-#     D = get!(BASE_MODELS, "fva_models", Dict())
-#     ChU.tagprintln_inmw("DOING FVA", 
-#         "\nexp:             ", exp,
-#         "\ncGLC:            ", cGLC,
-#         "\ncProgress:       ", length(D),
-#         "\n"
-#     )
-#     haskey(D, exp) && continue # cached
+    D = get!(BASE_MODELS, "fva_models", Dict())
+    ChU.tagprintln_inmw("DOING FVA", 
+        "\nexp:             ", exp,
+        "\ncGLC:            ", cGLC,
+        "\ncProgress:       ", length(D),
+        "\n"
+    )
+    haskey(D, exp) && continue # cached
 
-#     ## -------------------------------------------------------------------
-#     # prepare model
-#     model0 = deepcopy(model)
-#     intake_info = iJR.load_base_intake_info()
-#     # The only difference between experiments is the feed medium 
-#     # concentration.
-#     ξ = Hd.val("xi", exp)
-#     intake_info[iJR.EX_GLC_IDER]["c"] = cGLC
-#     ChSS.apply_bound!(model0, ξ, intake_info; 
-#         emptyfirst = true, ignore_miss = true
-#     )
+    ## -------------------------------------------------------------------
+    # prepare model
+    # Scale model (reduce S ill-condition)
+    scale_factor = 1000.0
+    model0 = scale_model(deepcopy(model), scale_factor)
+    intake_info = iJR.load_base_intake_info()
+    # The only difference between experiments is the feed medium 
+    # concentration.
+    ξ = Hd.val("xi", exp)
+    intake_info[iJR.EX_GLC_IDER]["c"] = cGLC
+    ChSS.apply_bound!(model0, ξ, intake_info; 
+        emptyfirst = true, ignore_miss = true
+    )
         
-#     ## -------------------------------------------------------------------
-#     # fva
-#     partial_test(model0)
-#     fva_model = ChLP.fva_preprocess(model0, 
-#         batchlen = 50,
-#         check_obj = iJR.BIOMASS_IDER,
-#         verbose = true
-#     )
-#     partial_test(fva_model)
+    ## -------------------------------------------------------------------
+    # fva
+    partial_test(model0)
+    fva_model = ChLP.fva_preprocess(model0, 
+        batchlen = 50,
+        check_obj = iJR.BIOMASS_IDER,
+        verbose = true
+    )
+    partial_test(fva_model)
 
-#     # storing
-#     D[exp] = compressed(fva_model)
-    
-# end
+    # storing
+    D[exp] = compressed(fva_model)
+end
 
 ## -------------------------------------------------------------------
 # MAX MODEL
@@ -256,8 +275,9 @@ let
     ChU.tagprintln_inmw("DOING MAX MODEL", 
         "\n"
     )
-
-    max_model = deepcopy(model)
+    
+    scale_factor = 1000.0
+    max_model = scale_model(deepcopy(model), scale_factor)
     
     # Biomass
     # 2.2 1/ h

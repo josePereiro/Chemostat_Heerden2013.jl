@@ -51,7 +51,7 @@ let
             epmaxiter = 2000 # maxiter for each maxent_ep
             gdmaxiter = 3000 # maxiter for each gradient descent
             gdth = 0.01  # th of each gradient descend
-            roundth = 0.05 # th of the whole simulation
+            roundth = 0.01 # th of the whole simulation
             stw = 10 # beta stability check window
             stth = 0.1 # beta stability check th
             smooth = 0.1 # gd smooth th
@@ -67,13 +67,13 @@ let
             vg_gddamp = 1.0 # vg gd current damp
 
             gdit = -1 # current gd iter
-            gderr = -1 # current gd error
-            last_uptime = -1 # time to check if gd needs to update
+            gderr = -1.0 # current gd error
+            last_uptime = -1.0 # time to check if gd needs to update
             upfrec_time = 15 # update info frequency
 
             # the whole simulation converge as ~log, 
             # so I force betas increment by stepping
-            beta_scale_len0 = 3 # starting round for beta stepping
+            beta_scale_rounditer0 = 3 # starting round for beta stepping
             beta_scale_factor = 1.0 # stepping scaling factor
 
             rounditer = 1 # current round iter
@@ -100,8 +100,8 @@ let
             end
 
             ## -------------------------------------------------------------------
-            function print_info(msg, mac = @info; varargs...)
-                mac(msg, 
+            function print_info(msg; varargs...)
+                @info(msg, 
                     varargs...,
                     epout.status, epout.iter, 
                     (biom_avPME_vgb0, biom_avPME, exp_growth), biom_diff, 
@@ -156,19 +156,32 @@ let
                 end
 
                 # RUN OUT OF PATIENT
-                (gdit >= turbo_iter0 && rem(gdit, turbo_frec) == 0) && (gdmodel.maxΔx *= turbo_factor)
+                (gdit >= turbo_iter0 && rem(gdit, turbo_frec) == 0) && 
+                    (gdmodel.maxΔx *= turbo_factor)
                 
                 gdit += 1
             end
 
 
             while true
+                
+                ## -------------------------------------------------------------------
+                # BETA SCALING
+                scalebeta = rounditer >= beta_scale_rounditer0
+                scalebeta && let
+                    biom_beta_step = biom_betas[end] - biom_betas[end - 1]
+                    biom_beta += biom_beta_step * beta_scale_factor
+
+                    vg_beta_step = vg_betas[end] - vg_betas[end - 1]
+                    vg_beta += vg_beta_step * beta_scale_factor
+                end
+
                 ## -------------------------------------------------------------------
                 # Z GRAD DESCEND: Match biomass momentums
                 let
                     target = exp_growth
                     x0 = biom_beta
-                    maxΔx = max(abs(biom_beta) * 0.05, 5e3)
+                    maxΔx = max(abs(biom_beta) * 0.05, 1e3)
                     minΔx = maxΔx * 0.01
                     x1 = x0 + maxΔx * 0.01
                     senses = [] # To detect damping
@@ -264,7 +277,7 @@ let
                 ## -------------------------------------------------------------------
                 # CEHCK NAN
                 if any(isnan.(biom_betas)) || any(isnan.(vg_betas))
-                    print_info("Nan detected (BIG PROBLEMS HERE)", @warn; 
+                    print_info("Nan detected (BIG PROBLEMS HERE)"; 
                         exp, rounditer
                     )
                     break
@@ -288,18 +301,6 @@ let
                     print_info("Round Done"; exp, rounditer, 
                         hasvalid_moments, isbeta_stationary, roundconv
                     )
-                end
-                
-                ## -------------------------------------------------------------------
-                # BETA SCALING
-                scalebeta = length(biom_betas) >= beta_scale_len0 && 
-                    length(vg_betas) >= beta_scale_len0 
-                scalebeta && let
-                    biom_beta_step = biom_betas[end] - biom_betas[end - 1]
-                    biom_beta += biom_beta_step * beta_scale_factor
-
-                    vg_beta_step = vg_betas[end] - vg_betas[end - 1]
-                    vg_beta += vg_beta_step * beta_scale_factor
                 end
 
                 ## -------------------------------------------------------------------
