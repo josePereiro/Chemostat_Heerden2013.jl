@@ -2,6 +2,7 @@ let
     objider = iJR.BIOMASS_IDER
     costider = iJR.COST_IDER
     exglcider = iJR.EX_GLC_IDER
+    max_sense = 1.0
     min_sense = 1.0
 
     iterator = Hd.val(:D) |> enumerate |> collect 
@@ -34,7 +35,7 @@ let
             model = base_model(exp)
             exp_growth = Hd.val("D", exp)
             ChU.bounds!(model, objider, exp_growth, exp_growth)
-            fbaout1 = ChLP.fba(model, exglcider; sense = min_sense)
+            fbaout1 = ChLP.fba(model, exglcider; sense = max_sense)
             exglc = ChU.av(model, fbaout1, exglcider)
             ChU.bounds!(model, exglcider, exglc, exglc)
             fbaout = ChLP.fba(model, costider; sense = min_sense)
