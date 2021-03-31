@@ -21,6 +21,9 @@ for preffix in ["u", "s", "c"]
     @eval $fname(id, args...) = val(string($preffix, id), args...)
 end
 
+ciD_X(id) = [cval(id, exp, 0.0) * val(:D, exp) / val(:DCW, exp) for exp in EXPS]
+ciD_X(id, exp) = cval(id, exp, 0.0) * val(:D, exp) / val(:DCW, exp)
+
 # Load data
 function _load_cont_cul_data()
 

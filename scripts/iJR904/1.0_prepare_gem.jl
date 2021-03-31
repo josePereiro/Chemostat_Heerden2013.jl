@@ -223,7 +223,7 @@ end
 compressed(model) = model |> ChU.struct_to_dict |> ChU.compressed_copy
 const BASE_MODELS = isfile(iJR.BASE_MODELS_FILE) ? 
     ChU.load_data(iJR.BASE_MODELS_FILE) : 
-    Dict("base_model" => compressed(model))
+    Dict("load_model" => compressed(model))
 cGLCs = Hd.val("cGLC")
 for (exp, cGLC) in enumerate(cGLCs)
 

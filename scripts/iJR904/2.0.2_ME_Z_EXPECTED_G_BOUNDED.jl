@@ -26,7 +26,7 @@ let
 
             ## -------------------------------------------------------------------
             # setup
-            model = base_model(exp)
+            model = load_model(exp)
             objidx = ChU.rxnindex(model, iJR.BIOMASS_IDER)
             M, N = size(model)
             exp_growth = Hd.val("D", exp)

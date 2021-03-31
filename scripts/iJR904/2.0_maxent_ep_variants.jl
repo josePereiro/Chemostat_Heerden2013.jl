@@ -46,20 +46,6 @@ function dat_file(name; kwargs...)
     joinpath(iJR.MODEL_PROCESSED_DATA_DIR, fname)
 end
 
-# -------------------------------------------------------------------
-function load_model(exp::Int, modelkey::String = "fva_models")
-    BASE_MODELS = ChU.load_data(iJR.BASE_MODELS_FILE; verbose = false);
-    model_dict = BASE_MODELS[modelkey][exp]
-    ChU.MetNet(;model_dict...) |> ChU.uncompressed_model
-end
-base_model(exp) = load_model(exp, "fva_models")
-
-function load_model(modelkey::String = "max_model")
-    BASE_MODELS = ChU.load_data(iJR.BASE_MODELS_FILE; verbose = false);
-    model_dict = BASE_MODELS[modelkey]
-    ChU.MetNet(;model_dict...) |> ChU.uncompressed_model
-end
-
 ## -------------------------------------------------------------------
 function check_cache(datfile, exp, method)
     thid = threadid()
