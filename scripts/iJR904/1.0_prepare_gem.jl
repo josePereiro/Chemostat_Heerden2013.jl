@@ -46,7 +46,7 @@ end
 # BASE MODEL
 # Load Mat file
 println("Original .mat model")
-src_file = iJR.MODEL_RAW_MAT_FILE
+src_file = iJR.rawdir("iJR904.mat")
 mat_model = MAT.matread(src_file)["model"]
 model = ChU.MetNet(mat_model; reshape = true);
 
@@ -186,21 +186,6 @@ let
 end
 
 ## -------------------------------------------------------------------
-# Exch_met_map
-
-# A quick way to get exchages from mets and te other way around
-exch_met_map = Dict()
-for exch_ in model.rxns[findall((id) -> any(startswith.(id, ["EX_", "DM_"])), model.rxns)]
-    mets_ = model.mets[ChU.rxn_mets(model, exch_)]
-    length(mets_) != 1 && continue
-    exch_met_map[exch_] = mets_[1]
-    exch_met_map[mets_[1]] = exch_
-end;
-
-# saving
-ChU.save_data(iJR.EXCH_MET_MAP_FILE, exch_met_map)
-
-## -------------------------------------------------------------------
 function scale_model(model, scale_factor)
     base_nzabs_range = ChU.nzabs_range(model.S)
     base_size = size(model)
@@ -221,8 +206,9 @@ end
 ## -------------------------------------------------------------------
 # FVA PREPROCESSING
 compressed(model) = model |> ChU.struct_to_dict |> ChU.compressed_copy
-const BASE_MODELS = isfile(iJR.BASE_MODELS_FILE) ? 
-    ChU.load_data(iJR.BASE_MODELS_FILE) : 
+MODEL_FILE = iJR.procdir("base_models.bson")
+const BASE_MODELS = isfile(MODEL_FILE) ? 
+    ChU.load_data(MODEL_FILE) : 
     Dict("load_model" => compressed(model))
 cGLCs = Hd.val("cGLC")
 for (exp, cGLC) in enumerate(cGLCs)
@@ -317,4 +303,4 @@ end;
 
 ## -------------------------------------------------------------------
 # SAVING
-ChU.save_data(iJR.BASE_MODELS_FILE, BASE_MODELS);
+ChU.save_data(MODEL_FILE, BASE_MODELS);

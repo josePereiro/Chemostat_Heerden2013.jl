@@ -5,7 +5,7 @@ let
     cGLC_plt = plot(;xlabel = "cGLC", ylabel = "beta")
     D_plt = plot(;xlabel = "D", ylabel = "beta")
     for exp in EXPS 
-        datfile = INDEX[method, :DFILE, exp]
+        datfile = ME_INDEX[method, :DFILE, exp]
         dat = deserialize(datfile)
         beta = dat[:exp_beta]
 
@@ -26,7 +26,7 @@ let
     method = ME_Z_EXPECTED_G_MOVING
     p = plot(title = iJR.PROJ_IDER, xlabel = "beta", ylabel = "biom")
     for exp in EXPS 
-        datfile = INDEX[method, :DFILE, exp]
+        datfile = ME_INDEX[method, :DFILE, exp]
         dat = deserialize(datfile)
         model = dat[:model]
         objidx = ChU.rxnindex(model, iJR.BIOMASS_IDER)

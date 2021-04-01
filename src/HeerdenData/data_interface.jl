@@ -26,12 +26,15 @@ ciD_X(id, exp) = cval(id, exp, 0.0) * val(:D, exp) / val(:DCW, exp)
 
 # Load data
 function _load_cont_cul_data()
-
-    !isfile(HEERDEN_CONT_CUL_DATA_CONV_FILE) && return CONT_CUL_DATA
+    
+    CONT_CUL_DATA_CONV_FILE = procdir("heerden2013___cont_cult_data.tsv")
+    !isfile(CONT_CUL_DATA_CONV_FILE) && return CONT_CUL_DATA
     
     ## ------------------------------------------------------------------
-    global CONT_CUL_DATA = CSV.read(HEERDEN_CONT_CUL_DATA_CONV_FILE, DataFrame; delim = '\t', comment = "#")
-
+    global CONT_CUL_DATA = CSV.read(CONT_CUL_DATA_CONV_FILE, DataFrame; 
+        delim = '\t', comment = "#"
+    )
+    
     ## ------------------------------------------------------------------
     # include xi
     CONT_CUL_DATA[!, :xi] = ["Cell specific dilution rate"; "gDW/ L hr"; val(:DCW) ./ val(:D)];

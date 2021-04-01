@@ -1,22 +1,27 @@
 module iJR904
 
-import BSON
-import ..Chemostat_Heerden2013: PROJ_ROOT, DATA_DIR, FIGURES_DATA_DIR, RAW_DATA_DIR, PROCESSED_DATA_DIR
-import Chemostat
-const ChU = Chemostat.Utils
-import ..BegData
-import CSV
-import DataFrames: DataFrame
+    import BSON
+    import ..Chemostat_Heerden2013
+    const ChH = Chemostat_Heerden2013
+    import Chemostat
+    const ChU = Chemostat.Utils
+    import ..BegData
+    const Bd = BegData
+    import CSV
+    import DataFrames: DataFrame
 
-include("const.jl")
-include("dirs_and_files.jl")
-include("maps.jl")
-include("beg_enz_cost.jl")
-include("base_intake_info.jl")
-include("load_model.jl")
+    import UtilsJL
+    const UJL = UtilsJL
+    UJL.gen_sub_proj(@__MODULE__)
 
-function __init__()
-    _create_dirs()
-end
+    include("const.jl")
+    include("maps.jl")
+    include("beg_enz_cost.jl")
+    include("base_intake_info.jl")
+    include("load_model.jl")
+
+    function __init__()
+        UJL.create_proj_dirs(@__MODULE__)
+    end
 
 end

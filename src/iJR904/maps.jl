@@ -190,6 +190,7 @@ end
 # base model exch met map
 # A quick way to get exchages from mets and te other way around
 function load_exch_met_map()
-    !isfile(EXCH_MET_MAP_FILE) && return Dict()
-    return load_data(EXCH_MET_MAP_FILE; verbose = false)
+    datfile = proddir("exch_met_map.bson")
+    !isfile(datfile) && return Dict()
+    return load_data(datfile; verbose = false)
 end

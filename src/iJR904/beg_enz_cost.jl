@@ -5,13 +5,13 @@
 const _beg_enz_cost_dict = Dict()
 function _load_beg_enz_cost_dict()
     empty!(_beg_enz_cost_dict)
-    beg_enz_data = BegData.load_beg_enz_data()
     beg_rxns_map = load_beg_rxns_map()
-
+    beg_enz_data = Bd.load_enz_data()
     for (i, beg_rxn) in enumerate(beg_enz_data.Enzyme)
         for model_rnx in beg_rxns_map[beg_rxn]
             if model_rnx != ""
-                _beg_enz_cost_dict[model_rnx] = beg_enz_data[i, Symbol("ai/xi (h g / mmol)")]
+                _beg_enz_cost_dict[model_rnx] = 
+                    beg_enz_data[i, Symbol("ai/xi (h g / mmol)")]
             end
         end
     end
@@ -19,5 +19,5 @@ end
 
 function beg_enz_cost(model_rxn)
     isempty(_beg_enz_cost_dict) && _load_beg_enz_cost_dict()
-    return get(_beg_enz_cost_dict, model_rxn, BegData.ave_a)
+    return get(_beg_enz_cost_dict, model_rxn, Bd.ave_a)
 end

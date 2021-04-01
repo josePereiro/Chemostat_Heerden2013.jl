@@ -28,7 +28,7 @@ let
             for method in ALL_METHODS
                 color = method_colors[method]    
 
-                datfile = INDEX[method, :DFILE, exp]
+                datfile = ME_INDEX[method, :DFILE, exp]
                 dat = deserialize(datfile)
                 model = dat[:model]
                 objidx = ChU.rxnindex(model, objider)
@@ -125,7 +125,7 @@ let
                 Hd_av = Hd.val(Hd_ider, exp)
                 color = exp_colors[exp]    
 
-                datfile = INDEX[method, :DFILE, exp]
+                datfile = ME_INDEX[method, :DFILE, exp]
                 dat = deserialize(datfile)
                 model = dat[:model]
                 objidx = ChU.rxnindex(model, objider)

@@ -35,6 +35,9 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
     import UtilsJL
     const UJL = UtilsJL
 
+    using Statistics
+    using ProgressMeter
+    using Base.Threads
     using Serialization
 
     # -------------------------------------------------------------------
@@ -44,7 +47,12 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
 end
 
 ## ----------------------------------------------------------------------------
-INDEX = ChU.load_data(iJR.MAXENT_VARIANTS_INDEX_FILE; verbose = false);
+# ME data index
+ME_INDEX = ChU.load_data(iJR.MAXENT_VARIANTS_ME_INDEX_FILE; verbose = false);
+
+## ----------------------------------------------------------------------------
+# LP data
+LPDAT = ChU.load_data(iJR.LP_DAT_FILE; verbose = false)
 
 # -------------------------------------------------------------------
 const ME_Z_OPEN_G_OPEN          = :ME_Z_OPEN_G_OPEN           # Do not use extra constraints

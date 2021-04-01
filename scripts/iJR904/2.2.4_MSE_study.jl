@@ -72,7 +72,7 @@ let
             xlabel = "beta", ylabel = "MSE"
         )
 
-        datfile = INDEX[method, :DFILE, exp]
+        datfile = ME_INDEX[method, :DFILE, exp]
         dat = deserialize(datfile)
         epouts = dat[:epouts]
         betas = epouts |> keys |> collect |> sort

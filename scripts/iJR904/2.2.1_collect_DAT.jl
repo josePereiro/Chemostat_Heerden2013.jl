@@ -4,14 +4,13 @@ let
     
     # CACHE
     DATfile = joinpath(iJR.MODEL_PROCESSED_DATA_DIR, "2.1_DAT.jls")
-    if isfile(DATfile) 
-        global DAT = deserialize(DATfile) 
-        @info("DAT CACHE LOADED")
-        return
-    end
+    # if isfile(DATfile) 
+    #     global DAT = deserialize(DATfile) 
+    #     @info("DAT CACHE LOADED")
+    #     return
+    # end
 
     objider = iJR.BIOMASS_IDER
-    DAT[:CONC_IDERS] = CONC_IDERS
     DAT[:FLX_IDERS] = FLX_IDERS
     DAT[:EXPS] = []
 
@@ -19,8 +18,8 @@ let
     for exp in Hd.EXPS
         ok = false
         for method in ALL_METHODS
-            ok = haskey(INDEX, method, :DFILE, exp) &&
-                INDEX[method, :DFILE, exp] != :unfeasible
+            ok = haskey(ME_INDEX, method, :DFILE, exp) &&
+                ME_INDEX[method, :DFILE, exp] != :unfeasible
             !ok && break
         end
         !ok && continue
@@ -30,16 +29,21 @@ let
 
     for exp in DAT[:EXPS], method in ALL_METHODS
             
-        datfile = INDEX[method, :DFILE, exp]
+        datfile = ME_INDEX[method, :DFILE, exp]
         dat = deserialize(datfile)
         
-        model = dat[:model]
-        objidx = ChU.rxnindex(model, objider)
+        # ep data
+        ep_model = dat[:model]
         exp_beta = dat[:exp_beta] 
         epout = dat[:epouts][exp_beta]
         exp_xi = Hd.val(:xi, exp)
         fva_model = iJR.load_model("fva_models", exp; uncompress = false)
 
+        # fba
+        fba_model = LPDAT[method, :model, exp]
+        fbaout = LPDAT[method, :fbaout, exp]
+        
+        
         println()
         @info("Doing", 
             exp, method, exp_beta, 
@@ -47,33 +51,42 @@ let
             epout.iter, datfile
         ); 
 
-        # Biomass
-        ep_biom = ChU.av(model, epout, objidx)
-        ep_std = sqrt(ChU.va(model, epout, objidx))
+        # ep
+        ep_biom = ChU.av(ep_model, epout, objider)
+        ep_std = sqrt(ChU.va(ep_model, epout, objider))
         Hd_biom = Hd.val("D", exp)
-        max_lb, max_ub = ChU.bounds(max_model, objidx)
-        fva_lb, fva_ub = ChU.bounds(fva_model, objidx)
+
+        # global
+        max_lb, max_ub = ChU.bounds(max_model, objider)
+        fva_lb, fva_ub = ChU.bounds(fva_model, objider)
         lb = max(max_lb, fva_lb)
         ub = min(max_ub, fva_ub)
+
+        # # TODO collect fba aswell
+        # # fba
+        # fba_biom = ChU.av(fba_model, fbaout, objider)
+        # DAT[method, :Hd, :flx, objider, exp] = Hd_flx
+        # DAT[method, :lp, :flx, objider, exp] = fba_flx
+
         
         # store
-        DAT[method, :ep   , :flx, objider, exp] = ep_biom
-        DAT[method, :eperr, :flx, objider, exp] = ep_std
-        DAT[method, :Hd   , :flx, objider, exp] = Hd_biom
-        DAT[:Hd   , :flx, objider, exp] = Hd_biom
-        DAT[method, :bounds, :flx, objider, exp] = (lb, ub)
+        DAT[method, :ep     , :flx, objider, exp] = ep_biom
+        DAT[method, :eperr  , :flx, objider, exp] = ep_std
+        DAT[method, :Hd     , :flx, objider, exp] = Hd_biom
+        DAT[method, :bounds , :flx, objider, exp] = (lb, ub)
+        DAT[        :Hd     , :flx, objider, exp] = Hd_biom
         
         # mets
         for Hd_met in FLX_IDERS
 
                 model_met = Hd_mets_map[Hd_met]
                 model_exch = Hd_rxns_map[Hd_met]
-                model_exchi = ChU.rxnindex(model, model_exch)
+                model_exchi = ChU.rxnindex(ep_model, model_exch)
 
                 # fuxes
                 proj = ChLP.projection2D(model, objider, model_exchi; l = 50)
-                ep_av = ChU.av(model, epout, model_exchi)
-                ep_std = sqrt(ChU.va(model, epout, model_exchi))
+                ep_av = ChU.av(ep_model, epout, model_exchi)
+                ep_std = sqrt(ChU.va(ep_model, epout, model_exchi))
                 Hd_flx = Hd.val("u$Hd_met", exp)
                 max_lb, max_ub = ChU.bounds(max_model, model_exchi)
                 fva_lb, fva_ub = ChU.bounds(fva_model, model_exchi)
@@ -89,24 +102,7 @@ let
 
         end
 
-        for Hd_met in CONC_IDERS
-
-            ep_av = DAT[method, :ep, :flx, Hd_met, exp]
-            ep_std = DAT[method, :eperr, :flx, Hd_met, exp] 
-
-            # conc (s = c + u*xi)
-            c = Hd.val("c$Hd_met", exp, 0.0)
-            ep_conc = max(c + ep_av * exp_xi, 0.0)
-            Hd_conc = Hd.val("s$Hd_met", exp)
-            
-            DAT[method, :Hd, :conc, Hd_met, exp] = Hd_conc
-            DAT[:Hd, :conc, Hd_met, exp] = Hd_conc
-            DAT[method, :ep, :conc, Hd_met, exp] = ep_conc
-            DAT[method, :eperr, :conc, Hd_met, exp] = ep_std * exp_xi
-        end
-
     end # for exp in EXPS
-
     DAT[:EXPS] |> unique! |> sort!
     
     # saving

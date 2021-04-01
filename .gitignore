@@ -6,6 +6,7 @@
 *.jpg
 *.pdf
 
+/plots
 /dev/
 /data/*
 !/data/raw

@@ -8,7 +8,7 @@ let
     ps_pool = Dict()
     for exp in EXPS
 
-        datfile = INDEX[method, :DFILE, exp]
+        datfile = ME_INDEX[method, :DFILE, exp]
         dat = deserialize(datfile)
         
         model = dat[:model]
@@ -23,9 +23,16 @@ let
             proj = DAT[method, :ep, :proj, Hd_ider, exp]
             ChP.plot_projection2D!(p, proj; l = 50)
 
-            # cgD/X
-            input = -Hd.cval(Hd_ider, exp, 0.0) * Hd.val(:D, exp) / Hd.val(:DCW, exp)
-            hline!(p, [input]; lw = 3, color = :black, ls = :solid, label = "input")
+            # bounds
+            lb, ub = DAT[method, :bounds, :flx, Hd_ider, exp]
+            hline!(p, [lb]; lw = 3, 
+                label = "fva lb",
+                color = :blue, ls = :solid
+            )
+            hline!(p, [ub]; lw = 3,
+                label = "fva ub", 
+                color = :red, ls = :solid
+            )
 
             # EXPERIMENTAL FLXS
             exp_biom = DAT[method, :Hd, :flx, biom_ider, exp]
