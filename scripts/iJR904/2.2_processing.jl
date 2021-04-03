@@ -79,8 +79,8 @@ ALL_METHODS = [
     # ME_Z_EXPECTED_G_MOVING
 ]
 
-Hd_rxns_map = iJR.load_Hd_rxns_map()
-Hd_mets_map = iJR.load_Hd_mets_map()
+Hd_rxns_map = iJR.load_rxns_map()
+Hd_mets_map = iJR.load_mets_map()
 
 ## ----------------------------------------------------------------------------
 # collect DAT

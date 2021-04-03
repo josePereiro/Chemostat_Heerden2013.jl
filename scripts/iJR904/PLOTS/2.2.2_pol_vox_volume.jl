@@ -5,7 +5,7 @@ let
     model0 = iJR.load_model("max_model")
 
     bins = 50
-    Hd_rxns_map = iJR.load_Hd_rxns_map()
+    Hd_rxns_map = iJR.load_rxns_map()
     offsetf = 1.1
     
     exglcidx = ChU.rxnindex(model0, iJR.EX_GLC_IDER)

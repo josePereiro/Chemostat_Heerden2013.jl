@@ -269,7 +269,7 @@ let
     # 2.2 1/ h
     ChU.bounds!(max_model, iJR.BIOMASS_IDER, 0.0, 2.2)
     
-    Hd_rxns_map = iJR.load_Hd_rxns_map() 
+    Hd_rxns_map = iJR.load_rxns_map() 
     # 40 mmol / gDW h
     ChU.bounds!(max_model, Hd_rxns_map["GLC"], -40.0, 0.0)
     # 45 mmol/ gDW

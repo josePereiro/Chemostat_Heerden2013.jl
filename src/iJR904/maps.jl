@@ -6,41 +6,45 @@
 # data and the model
 #####################
 # Mets map
-function load_Hd_mets_map() 
-    Hd_mets_map = Dict()
-    Hd_mets_map["GLC"] = "glc_DASH_D_e"
-    Hd_mets_map["SUCC"] = "succ_e"
-    Hd_mets_map["THM"] = "thm_e"
-    Hd_mets_map["NH4"] = "nh4_e"
-    Hd_mets_map["CIT"] = "cit_e"
-    Hd_mets_map["CO2"] = "co2_e"
-    Hd_mets_map["FORM"] = "for_e"
-    Hd_mets_map["O2"] = "o2_e"
-    Hd_mets_map["AC"] = "ac_e"
-    Hd_mets_map["MAL"] = "mal_DASH_D_e";
-    for (k, v) in Hd_mets_map
-        Hd_mets_map[v] = k
+function load_mets_map()   
+    mets_map = Dict()
+    mets_map["GLC"] = "glc_DASH_D_e"
+    mets_map["SUCC"] = "succ_e"
+    mets_map["FORM"] = "for_e"
+    mets_map["THM"] = "thm_e"
+    mets_map["NH4"] = "nh4_e"
+    mets_map["CIT"] = "cit_e"
+    mets_map["CO2"] = "co2_e"
+    mets_map["O2"] = "o2_e"
+    mets_map["AC"] = "ac_e"
+    mets_map["PYR"] = "pyr_e"
+    mets_map["LAC"] = "lac_DASH_D_e"
+    mets_map["MAL"] = "mal_DASH_D_e";
+    for (k, v) in mets_map
+        mets_map[v] = k
     end
-    return Hd_mets_map
+    return mets_map
 end
 
-function load_Hd_rxns_map() 
-    Hd_rxns_map = Dict()
-    Hd_rxns_map["D"] = "KAYSER_BIOMASS_RXN"
-    Hd_rxns_map["GLC"] = "EX_glc_LPAREN_e_RPAREN_"
-    Hd_rxns_map["SUCC"] = "EX_succ_LPAREN_e_RPAREN_"
-    Hd_rxns_map["THM"] = "EX_thm_LPAREN_e_RPAREN_"
-    Hd_rxns_map["NH4"] = "EX_nh4_LPAREN_e_RPAREN_"
-    Hd_rxns_map["CIT"] = "EX_cit_LPAREN_e_RPAREN_"
-    Hd_rxns_map["CO2"] = "EX_co2_LPAREN_e_RPAREN_"
-    Hd_rxns_map["FORM"] = "EX_for_LPAREN_e_RPAREN_"
-    Hd_rxns_map["O2"] = "EX_o2_LPAREN_e_RPAREN_"
-    Hd_rxns_map["AC"] = "EX_ac_LPAREN_e_RPAREN_"
-    Hd_rxns_map["MAL"] = "EX_mal_L_LPAREN_e_RPAREN_";
-    for (k, v) in Hd_rxns_map
-        Hd_rxns_map[v] = k
+function load_rxns_map() 
+    rxns_map = Dict()
+    rxns_map["D"] = "KAYSER_BIOMASS_RXN"
+    rxns_map["AC"] = "EX_ac_LPAREN_e_RPAREN_"
+    rxns_map["NH4"] = "EX_nh4_LPAREN_e_RPAREN_"
+    rxns_map["GLC"] = "EX_glc_LPAREN_e_RPAREN_"
+    rxns_map["THM"] = "EX_thm_LPAREN_e_RPAREN_"
+    rxns_map["CO2"] = "EX_co2_LPAREN_e_RPAREN_"
+    rxns_map["FORM"] = "EX_for_LPAREN_e_RPAREN_"
+    rxns_map["CIT"] = "EX_cit_LPAREN_e_RPAREN_"
+    rxns_map["SUCC"] = "EX_succ_LPAREN_e_RPAREN_"
+    rxns_map["O2"] = "EX_o2_LPAREN_e_RPAREN_"
+    rxns_map["MAL"] = "EX_mal_L_LPAREN_e_RPAREN_"
+    rxns_map["LAC"] = "EX_lac_D_LPAREN_e_RPAREN_"
+    rxns_map["PYR"] = "EX_pyr_LPAREN_e_RPAREN_"
+    for (k, v) in rxns_map
+        rxns_map[v] = k
     end
-    return Hd_rxns_map
+    return rxns_map
 end
 
 # Map for Heerden2013 https://doi.org/10.1186/1475-2859-12-80. Table 2

@@ -3,7 +3,7 @@
 
 ## ------------------------------------------------------------------
 CONT_CUL_DATA = DataFrame()
-MSD_METS = ["GLC", "SUCC", "AC", "FORM", "MAL"]
+msd_mets = ["GLC", "SUCC", "AC", "FORM", "MAL"]
 EXPS = 1:13
 
 # Interface
@@ -46,7 +46,7 @@ function _load_cont_cul_data()
     # Converting to flux u = (s - c)/ξ (+) means uptake
     let
         xi = val(:xi)
-        for met in MSD_METS
+        for met in msd_mets
             umet = Symbol("u$met")
             smet = Symbol("s$met")
             cmet = Symbol("c$met")
