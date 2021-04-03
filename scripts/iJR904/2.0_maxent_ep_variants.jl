@@ -30,45 +30,38 @@ quickactivate(@__DIR__, "Chemostat_Heerden2013")
 
     import UtilsJL
     const UJL = UtilsJL
-    UJL.set_cache_dir(iJR.MODEL_CACHE_DIR)
-    
+    UJL.set_cache_dir(iJR.cachedir())
 end
 
-## -------------------------------------------------------------------
+## ----------------------------------------------------------------------------
 # globals
 const WLOCK = ReentrantLock()
-const SIM_GLOBAL_ID = "iJR904_MAXENT_VARIANTS"
-const DAT_FILE_PREFFIX =  "maxent_ep_boundle_"
+const DAT_FILE_PREFFIX = "maxent_ep_dat"
 
-const INDEX = ChU.DictTree()
-function dat_file(name; kwargs...)
-    fname = ChU.mysavename(name, "jls"; kwargs...)
-    joinpath(iJR.MODEL_PROCESSED_DATA_DIR, fname)
-end
-
-## -------------------------------------------------------------------
-function check_cache(datfile, exp, method)
-    thid = threadid()
-    if isfile(datfile)
-        lock(WLOCK) do
-            INDEX[method, :DFILE, exp] = datfile
-            @info("Cached loaded (skipping)",
-                exp, datfile, thid
-            )
-            println()
-        end
-        return true
-    end
-    return false
-end
-
-# -------------------------------------------------------------------
-# METHOD VARIANTS
+## ----------------------------------------------------------------------------
 const ME_Z_OPEN_G_OPEN          = :ME_Z_OPEN_G_OPEN           # Do not use extra constraints
 const ME_MAX_POL                = :ME_MAX_POL                 # 
+const ME_MAX_POL_B0             = :ME_MAX_POL_B0                 # 
+const ME_Z_EXPECTED_G_EXPECTED  = :ME_Z_EXPECTED_G_EXPECTED    # Match ME and Dy biom average and constraint av_ug
 const ME_Z_EXPECTED_G_BOUNDED   = :ME_Z_EXPECTED_G_BOUNDED    # Match ME and Dy biom average and constraint av_ug
 const ME_Z_EXPECTED_G_MOVING    = :ME_Z_EXPECTED_G_MOVING     # 
 const ME_Z_FIXXED_G_BOUNDED     = :ME_Z_FIXXED_G_BOUNDED      # Fix biom around observed
+
+## -------------------------------------------------------------------
+function dat_file(;kwargs...)
+    fname = UJL.mysavename(DAT_FILE_PREFFIX, "jls"; kwargs...)
+    iJR.procdir(fname)
+end
+
+function check_cache(;kwargs...)
+    thid = threadid()
+    datfile = dat_file(;kwargs...)
+    isfile(datfile) && lock(WLOCK) do
+        @info("Cached loaded (skipping)",
+            datfile, thid
+        ); println()
+    end; isfile(datfile)
+end
 
 # ## -------------------------------------------------------------------
 # # ME_Z_EXPECTED_G_MOVING
@@ -91,6 +84,6 @@ const ME_Z_FIXXED_G_BOUNDED     = :ME_Z_FIXXED_G_BOUNDED      # Fix biom around 
 # ME_MAX_POL
 include("2.0.5_ME_MAX_POL.jl")
 
-## -------------------------------------------------------------------
-# SAVE INDEX
-ChU.save_data(iJR.MAXENT_VARIANTS_INDEX_FILE, INDEX; verbose = false)
+## ----------------------------------------------------------------------------
+# ME_MAX_POL_B0
+include("2.0.7_ME_MAX_POL_B0.jl")

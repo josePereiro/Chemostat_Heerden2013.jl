@@ -15,18 +15,9 @@ let
 
             ## -------------------------------------------------------------------
             # handle cache
-            datfile = dat_file(string(DAT_FILE_PREFFIX, method); exp)
-            if isfile(datfile)
-                lock(WLOCK) do
-                    INDEX[method, :DFILE, exp] = datfile
-                    @info("Cached loaded (skipping)",
-                        exp, cGLC,datfile, thid
-                    )
-                    println()
-                end
-                continue
-            end
-            
+            datfile = dat_file(;method, exp)
+            check_cache(;method, exp) && continue
+
             ## -------------------------------------------------------------------
             # SetUp
             model_cache_id = (:MODEL0_CACHE, exp)
@@ -164,7 +155,6 @@ let
 
                 # caching
                 serialize(datfile, dat)
-                INDEX[method, :DFILE, exp] = datfile
 
                 ep_growth = ChU.av(epouts[expβ])[objidx]
                 diff = abs.(exp_growth - ep_growth)
@@ -189,7 +179,7 @@ let
     iterator = Hd.val("cGLC") |> enumerate |> collect 
     @threads for (exp, cGLC) in iterator
 
-        datfile = INDEX[method, :DFILE, exp]
+        datfile = dat_file(;method, exp)
         datfile == :unfeasible && continue
         dat = deserialize(datfile)
         model, epouts = ChU.uncompressed_model(dat[:model]) , dat[:epouts]

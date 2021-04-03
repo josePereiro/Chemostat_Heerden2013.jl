@@ -15,7 +15,7 @@ let
             datfile = dat_file(string(DAT_FILE_PREFFIX, method); exp)
             if isfile(datfile)
                 lock(WLOCK) do
-                    INDEX[method, :DFILE, exp] = datfile
+                    
                     @info("Cached loaded (skipping)",
                         exp, cGLC,datfile, thid
                     )
@@ -108,7 +108,7 @@ let
 
                 # caching
                 serialize(datfile, dat)
-                INDEX[method, :DFILE, exp] = datfile
+                
 
                 ep_growth = ChU.av(epouts[expβ])[objidx]
                 diff = abs.(exp_growth - ep_growth)
