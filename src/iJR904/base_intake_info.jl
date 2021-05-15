@@ -8,5 +8,7 @@ function load_base_intake_info()
         "EX_o2_LPAREN_e_RPAREN_"  => Dict("c"=>99999.0, "lb"=> -100.0),
         "EX_pi_LPAREN_e_RPAREN_"  => Dict("c"=>99999.0, "lb"=> -100.0),
         "EX_so4_LPAREN_e_RPAREN_" => Dict("c"=>99999.0, "lb"=> -100.0),
+        "EX_h2o_LPAREN_e_RPAREN_" => Dict("c"=>99999.0, "lb"=> -100.0),
+        "EX_h_LPAREN_e_RPAREN_" => Dict("c"=>99999.0, "lb"=> -100.0),
     )
 end

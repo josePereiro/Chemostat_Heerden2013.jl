@@ -61,10 +61,12 @@ partial_test(model)
 # # Heerden2013 describes some gene modifications
 # # https://doi.org/10.1186/1475-2859-12-80. Table 2
 # ChU.tagprintln_inmw("GENE MODIFICATIONS")
-# for (name, ider) in iJR.Hd_to_inactivate_map
-#     ChU.bounds!(model, ider, 0.0, 0.0)
+# for (name, iders) in iJR.load_Hd_to_inactivate_map()
+#     ChU.bounds!.([model], iders, 0.0, 0.0)
+#     @info("Closing gene modificated", iders)
+#     partial_test(model)
+#     println()
 # end
-# partial_test(model)
 
 ## -------------------------------------------------------------------
 # Set bounds

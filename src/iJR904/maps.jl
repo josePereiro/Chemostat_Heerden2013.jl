@@ -28,7 +28,7 @@ end
 
 function load_rxns_map() 
     rxns_map = Dict()
-    rxns_map["D"] = "KAYSER_BIOMASS_RXN"
+    rxns_map["D"] = "BiomassEcoli"
     rxns_map["AC"] = "EX_ac_LPAREN_e_RPAREN_"
     rxns_map["NH4"] = "EX_nh4_LPAREN_e_RPAREN_"
     rxns_map["GLC"] = "EX_glc_LPAREN_e_RPAREN_"
@@ -50,16 +50,51 @@ end
 # Map for Heerden2013 https://doi.org/10.1186/1475-2859-12-80. Table 2
 function load_Hd_to_inactivate_map()
     Hd_to_inactivate_map = Dict(
-        "2-ketobutyrate formate lyase"=>"OBTFL",
-        "Acetate kinase"=>"ACKr",
-        "Alcohol dehydrogenase"=>"ALCD19",
-        "Citrate lyase"=>"CITL",
-        "Lactate dehydrogenase"=>"LDH_D",
-        "Methylglyoxal synthase"=>"MGSA",
-        "NAD+-linked malic enzyme"=>"ME1",
-        "Phosphotransacetylase"=>"PTAr",
-        "Pyruvate formate lyase"=>"PFL",
-        "Pyruvate oxidase"=>"POX",
+
+        # P42632
+        # EC:2.3.1. 
+        # 2-oxobutanoate + CoA = formate + propanoyl-CoA
+        "2-ketobutyrate formate lyase"=>["OBTFL"],
+
+        # P0A6A3
+        # EC:2.7.2.1
+        # acetate + ATP = acetyl phosphate + ADP 
+        "Acetate kinase"=>["ACKr"],
+
+        # (-1.0) glyald_c + (-1.0) h_c + (-1.0) nadh_c + (-0.00242) cost ==> (1.0) glyc_c + (1.0) nad_c
+        "Alcohol dehydrogenase"=>["ALCD19"],
+
+        # (-1.0) asp_DASH_L_c + (-1.0) cbp_c + (-4.4e-5) cost ==> (1.0) cbasp_c + (1.0) h_c + (1.0) pi_c
+        "Aspartate aminotransferase" => ["ASPCT"],
+
+        # (-1.0) cit_c + (-0.0031) cost ==> (1.0) ac_c + (1.0) oaa_c
+        "Citrate lyase"=>["CITL"],
+
+        # (-1.0) for_e + (-0.0031) cost ==> (1.0) for_c
+        "Formate transporter" => ["FORt"],
+
+        # (-1.0) lac_DASH_D_c + (-1.0) q8_c + (-0.0031) cost ==> (1.0) pyr_c + (1.0) q8h2_c
+        "Lactate dehydrogenase"=> ["LDH_D2", "LDH_D"],
+
+        # P0A731
+        # (-1.0) dhap_c + (-0.0031) cost ==> (1.0) mthgxl_c + (1.0) pi_c
+        "Methylglyoxal synthase"=>["MGSA"],
+
+        # P26616
+        # (-1.0) mal_DASH_L_c + (-1.0) nad_c + (-0.0031) cost ==> (1.0) co2_c + (1.0) nadh_c + (1.0) pyr_c
+        "NAD+-linked malic enzyme"=>["ME1"],
+
+        # P0A9M8
+        # acetyl-CoA + phosphate = acetyl phosphate + CoA
+        "Phosphotransacetylase"=>["PTAr"],
+
+        # P42632
+        # 2-oxobutanoate + CoA = formate + propanoyl-CoA
+        "Pyruvate formate lyase"=>["PFL"],
+
+        # (-1.0) h2o_c + (-1.0) pyr_c + (-1.0) q8_c + (-0.0031) cost ==> (1.0) ac_c + (1.0) co2_c + (1.0) q8h2_c
+        "Pyruvate oxidase"=>["POX"],
+
         # "Threonine decarboxylase"=> "" # not found in model TODO: Find it
     )
 end
@@ -197,4 +232,25 @@ function load_exch_met_map()
     datfile = proddir("exch_met_map.bson")
     !isfile(datfile) && return Dict()
     return load_data(datfile; verbose = false)
+end
+
+function load_krebs_iders()
+    krebs_iders = ["SUCD1", "SUCOAS", "AKGDH", "ICDHyr", 
+        "ACONT", "CS", "MDH", "FUM", "MALS", "ICL"
+    ]
+end
+
+function load_inners_idermap()
+    kreps_idermap = Dict(
+        "SUCD1" => ["SUCD1i"], 
+        "SUCOAS" => ["SUCOAS_fwd", "SUCOAS_bkwd"], 
+        "AKGDH" => ["AKGDH"],
+        "ICDHyr" => ["ICDHyr_fwd", "ICDHyr_bkwd"],
+        "ACONT" => ["ACONT_bkwd", "ACONT_fwd"],
+        "CS" => ["CS"],
+        "MDH" => ["MDH_fwd", "MDH_bkwd"],
+        "FUM" => ["FUM_fwd", "FUM_bkwd"],
+        "MALS" => ["MALS"],
+        "ICL" => ["ICL"]
+    )
 end
