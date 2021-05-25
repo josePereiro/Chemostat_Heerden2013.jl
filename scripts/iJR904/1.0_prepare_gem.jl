@@ -56,17 +56,20 @@ model = ChU.MetNet(mat_model; reshape = true);
 # to use it directly as base model
 partial_test(model)
 
-# ## -------------------------------------------------------------------
-# # Gene intactivations
-# # Heerden2013 describes some gene modifications
-# # https://doi.org/10.1186/1475-2859-12-80. Table 2
-# ChU.tagprintln_inmw("GENE MODIFICATIONS")
-# for (name, iders) in iJR.load_Hd_to_inactivate_map()
-#     ChU.bounds!.([model], iders, 0.0, 0.0)
-#     @info("Closing gene modificated", iders)
-#     partial_test(model)
-#     println()
-# end
+## -------------------------------------------------------------------
+# Gene intactivations
+# Heerden2013 describes some gene modifications
+# https://doi.org/10.1186/1475-2859-12-80. Table 2
+ChU.tagprintln_inmw("GENE MODIFICATIONS")
+for (name, iders) in iJR.load_Hd_to_inactivate_map()
+
+    name in ["Aspartate aminotransferase"] && continue ## Closing this one are lethal
+
+    ChU.bounds!.([model], iders, 0.0, 0.0)
+    @info("Closing gene modificated", iders)
+    partial_test(model)
+    println()
+end
 
 ## -------------------------------------------------------------------
 # Set bounds
@@ -209,7 +212,7 @@ end
 # FVA PREPROCESSING
 compressed(model) = model |> ChU.struct_to_dict |> ChU.compressed_copy
 MODEL_FILE = iJR.procdir("base_models.bson")
-const BASE_MODELS = isfile(MODEL_FILE) ? 
+BASE_MODELS = isfile(MODEL_FILE) ? 
     ChU.load_data(MODEL_FILE) : 
     Dict("load_model" => compressed(model))
 cGLCs = Hd.val("cGLC")
