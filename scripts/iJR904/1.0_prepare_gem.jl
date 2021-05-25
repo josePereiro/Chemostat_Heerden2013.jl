@@ -30,8 +30,9 @@ end
 # Tools
 function partial_test(model, title  = "PARTIAL TEST")
     withcost = iJR.COST_IDER in model.rxns
-    iders = withcost ? [iJR.BIOMASS_IDER, iJR.COST_IDER] : [iJR.BIOMASS_IDER]
-    fbaout = ChLP.fba(model, iders...);
+    fbaout = withcost ?
+        ChLP.fba(model, iJR.BIOMASS_IDER, iJR.COST_IDER; btol = 1e-2) :
+        ChLP.fba(model, iJR.BIOMASS_IDER)
     ChU.tagprintln_inmw(title, 
         "\nsize:             ", size(model),
         "\nobj_ider:         " , iJR.BIOMASS_IDER,
@@ -232,6 +233,7 @@ for (exp, cGLC) in enumerate(cGLCs)
     # Scale model (reduce S ill-condition)
     scale_factor = 1000.0
     model0 = scale_model(deepcopy(model), scale_factor)
+
     intake_info = iJR.load_base_intake_info()
     # The only difference between experiments is the feed medium 
     # concentration.
@@ -269,7 +271,7 @@ let
     
     scale_factor = 1000.0
     max_model = scale_model(deepcopy(model), scale_factor)
-    
+    # max_model = deepcopy(model)
     # Biomass
     # 2.2 1/ h
     ChU.bounds!(max_model, iJR.BIOMASS_IDER, 0.0, 2.2)
