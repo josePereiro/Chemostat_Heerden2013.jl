@@ -52,6 +52,7 @@ let
 
             epmaxiter = 2000 # maxiter for each maxent_ep
             gdmaxiter = 3000 # maxiter for each gradient descent
+            ep_epsconv = 1e-4
             gdth = 0.01  # th of each gradient descend
             roundth = 0.01 # th of the whole simulation
             stw = 10 # beta stability check window
@@ -124,7 +125,7 @@ let
                     beta_vec,
                     alpha = Inf,
                     maxiter = epmaxiter,  
-                    epsconv = 1e-3, 
+                    epsconv = ep_epsconv, 
                     verbose = false, 
                     solution = epout
                 )

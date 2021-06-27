@@ -20,11 +20,11 @@ end
 ## ----------------------------------------------------------------------------
 fileid = "2.0"
 mysavefig(p, pname; params...) = 
-    UJL.mysavefig(p, string(fileid, "_", pname), iJR.MODEL_FIGURES_DIR; params...)
+    UJL.mysavefig(p, string(fileid, "_", pname), iJR.plotsdir(); params...)
 
 ## ----------------------------------------------------------------------------
 let
-    mon = UJL.OnDiskMonitor(iJR.MODEL_CACHE_DIR, "monitor.jld2")
+    mon = UJL.OnDiskMonitor(iJR.cachedir(), "monitor.jld2")
     live_proves = Dict()
 
     UJL.watch(mon; wt = 15.0) do ddat

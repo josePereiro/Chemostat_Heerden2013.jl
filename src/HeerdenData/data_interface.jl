@@ -4,7 +4,8 @@
 ## ------------------------------------------------------------------
 CONT_CUL_DATA = DataFrame()
 # msd_mets = ["GLC", "SUCC", "AC", "FORM", "MAL"]
-msd_mets = ["GLC", "SUCC", "AC", "FORM"]
+# msd_mets = ["GLC", "SUCC", "AC", "FORM"]
+msd_mets = ["GLC", "SUCC", "AC"]
 EXPS = 1:13
 
 # Interface
